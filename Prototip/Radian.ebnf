@@ -1,0 +1,265 @@
+(* ================================================================== *)
+(*  MyLang — Canonical BNF Grameri                                    *)
+(*  Versiyon: 0.3                                                      *)
+(*                                                                    *)
+(*  Gösterim:                                                         *)
+(*    { x }   → x sıfır veya daha fazla kez                          *)
+(*    [ x ]   → x opsiyonel (sıfır ya da bir kez)                    *)
+(*    ( x )   → gruplama                                              *)
+(*    x | y   → x ya da y                                            *)
+(*    "..."   → terminal sembol (token değeri)                        *)
+(*    T_*     → lexer token tipi                                      *)
+(* ================================================================== *)
+
+
+(* ------------------------------------------------------------------ *)
+(*  PROGRAM                                                            *)
+(* ------------------------------------------------------------------ *)
+
+Program         = { TopLevel }
+
+TopLevel        = FuncDef
+                | Statement
+
+(*
+  Ayrım kuralı (parser lookahead):
+    IDENTIFIER + "{"  →  FuncDef (gövde, imzasız)
+    IDENTIFIER + "("  →  FuncDef (satır içi imzalı)
+    diğer             →  Statement
+*)
+
+
+(* ------------------------------------------------------------------ *)
+(*  FONKSİYON                                                          *)
+(* ------------------------------------------------------------------ *)
+
+FuncDef         = T_IDENTIFIER [ FuncSignature ] Block
+
+(*
+  Geçerli formlar:
+
+    1) Sadece gövde (imza ayrıca bildirilmiş):
+         topla { result = x + y; result; }
+
+    2) Satır içi imza + gövde (tam tanım):
+         topla (x:i32, y:i32) -> i32 {
+             result = x + y;
+             result;
+         }
+
+    3) Sadece imza bildirimi — Statement olarak:
+         topla : (x:i32, y:i32) -> i32;
+*)
+
+FuncSignature   = "(" [ TypeParamList ] ")" "->" TypeExpr
+
+
+(* ------------------------------------------------------------------ *)
+(*  BLOK                                                               *)
+(* ------------------------------------------------------------------ *)
+
+Block           = "{" { Statement } "}"
+
+(*
+  - Son Statement'ın değeri blokun değeridir (implicit return).
+  - Tüm Statement'lar ";" ile biter; son Statement da dahil.
+  - Boş blok "{}" → unit döndürür (semantik katmanda tanımlanacak).
+  - Blok hem fonksiyon gövdesi hem değer (Term) olarak kullanılabilir:
+      r = { a = 1; a + 2; };   (* r = 3 *)
+*)
+
+
+(* ------------------------------------------------------------------ *)
+(*  STATEMENT                                                          *)
+(* ------------------------------------------------------------------ *)
+
+Statement       = Expression ";"
+
+
+(* ------------------------------------------------------------------ *)
+(*  İFADE HİYERARŞİSİ  (düşük → yüksek öncelik)                      *)
+(* ------------------------------------------------------------------ *)
+
+Expression      = Assign
+
+(*
+  Assign — sağ-çağrışımlı, lvalue döndürür
+  ──────────────────────────────────────────
+  "=" operatörü atama yapar ve sol tarafı (lvalue) döndürür.
+
+    a = b         → b'yi a'ya ata, a'yı döndür
+    a = b = c     → ASSIGN( a, ASSIGN(b, c) )      sağ-çağrışımlı
+    (a = b) + 2   → a'ya b atanır, sonuç a+2        parantez ile lvalue kullanımı
+*)
+Assign          = TypeBind [ "=" Assign ]
+
+(*
+  TypeBind — sağ-çağrışımlı, lvalue döndürür
+  ────────────────────────────────────────────
+  ":" operatörü tip bağlar ve sol tarafı (lvalue) döndürür.
+  Sağ taraf her zaman TypeExpr'dir; Expression değil.
+
+    b : i32            → b'yi i32'ye dönüştür, b'yi döndür
+    a : i32 = b        → ASSIGN( TYPEBIND(a, i32), b )
+    a = b : i32        → ASSIGN( a, TYPEBIND(b, i32) )
+    a : i32 = b : f64  → ASSIGN( TYPEBIND(a,i32), TYPEBIND(b,f64) )
+*)
+TypeBind        = Binary [ ":" TypeExpr ]
+
+(*
+  Binary — sol-çağrışımlı
+  ─────────────────────────
+  "=" ve ":" bu seviyeye geçemez; üst katmanlarda yakalanır.
+  Tüm kullanıcı tanımlı operatörler bu seviyededir.
+
+    a + b + c  →  BINARY( BINARY(a,+,b), +, c )
+*)
+Binary          = Unary { Operator Unary }
+
+(*
+  Unary — önek tekli operatör
+  ────────────────────────────
+  Yalnızca SYMBOL token'ları unary operatör olabilir (şimdilik).
+  Ardında Term başlıyorsa (literal, "(", "{") unary olarak işlenir.
+
+    -5      →  UNARY_OP( -, 5 )
+    !flag   →  UNARY_OP( !, flag )
+    -(x+1)  →  UNARY_OP( -, BINARY(x,+,1) )
+*)
+Unary           = [ UnaryOp ] Term
+
+(*
+  Term — en yüksek öncelik
+  ─────────────────────────
+  Parantez içinde tam Expression işlenir:
+    (a = b) + 2   geçerli — lvalue olarak kullanım
+  Blok değer olarak kullanılabilir:
+    r = { n = 1; n + 2; };
+  Fonksiyon çağrısı: IDENTIFIER "(" [ ArgumentList ] ")"
+    print(42);          →  FunctionCall
+    apply(f, g(x));     →  iç içe FunctionCall
+*)
+Term            = FunctionCall
+                | "(" Expression ")"
+                | Block
+                | Literal
+
+FunctionCall    = T_IDENTIFIER "(" [ ArgumentList ] ")"
+
+ArgumentList    = Expression { "," Expression }
+
+
+(* ------------------------------------------------------------------ *)
+(*  TİP DİLİ  (Expression'dan bağımsız, yalnızca ":" sağında)        *)
+(* ------------------------------------------------------------------ *)
+
+(*
+  TypeExpr — sağ-çağrışımlı
+  ──────────────────────────
+  "->" fonksiyon tipi oluşturur; currying doğal olarak desteklenir.
+
+    i32
+    (x:i32, y:i32) -> i32
+    (x:i32) -> (y:i32) -> bool    →    (x:i32) -> ((y:i32) -> bool)
+*)
+TypeExpr        = TupleTypeExpr "->" TypeExpr
+                | TupleTypeExpr
+
+(*
+  TupleTypeExpr:
+    "(" ile başlarsa parametre listesi veya tuple tipidir.
+    Tek isim ise doğrudan tip ismidir.
+*)
+TupleTypeExpr   = "(" [ TypeParamList ] ")"
+                | T_IDENTIFIER
+
+TypeParamList   = TypeParam { "," TypeParam }
+
+(*
+  TypeParam — isimli veya isimsiz
+  ────────────────────────────────
+    x : i32     →  isimli
+    i32         →  isimsiz
+*)
+TypeParam       = T_IDENTIFIER ":" TypeExpr
+                | TypeExpr
+
+
+(* ------------------------------------------------------------------ *)
+(*  FONKSIYON ÇAĞRISI                                                  *)
+(* ------------------------------------------------------------------ *)
+
+(*
+  FunctionCall = T_IDENTIFIER "(" [ ArgumentList ] ")"
+  
+  Açıklamalar:
+    - IDENTIFIER fonksiyon ismi olmalıdır (operatör değil)
+    - Argümanlar virgülle ayrılmış, tam Expression'lardır
+    - Term seviyesinde parse edilmesiyle parantez tutarsızlığı önlenir
+  
+  Örnekler:
+    print(x)
+    add(1, 2, 3)
+    apply(f, g(y), h(z))
+*)
+
+FunctionCall    = T_IDENTIFIER "(" [ ArgumentList ] ")"
+ArgumentList    = Expression { "," Expression }
+
+
+(* ------------------------------------------------------------------ *)
+(*  OPERATÖRLER                                                        *)
+(* ------------------------------------------------------------------ *)
+
+(*
+  Lexer çok karakterli sembolleri symbols.txt'den yükler ve tek token
+  üretir (örn: "->", "==", "+=", "**", "::").
+  Parser bitişik sembol token'larını birleştirebilir (lexer dışı kaldıysa).
+
+  UnaryOp : yalnızca T_SYMBOL, ardından Term geliyorsa.
+  Operator: "=", ":", terminatörler dışındaki T_SYMBOL veya T_IDENTIFIER.
+*)
+
+Operator        = ( T_SYMBOL | T_IDENTIFIER ) { T_SYMBOL }
+UnaryOp         = T_SYMBOL
+
+
+(* ------------------------------------------------------------------ *)
+(*  LİTERAL                                                            *)
+(* ------------------------------------------------------------------ *)
+
+Literal         = T_STRING
+                | T_CHAR
+                | T_NUMBER
+                | T_IDENTIFIER
+                | T_SYMBOL
+                | PrimitiveType
+
+PrimitiveType   = "i8"  | "i16" | "i32" | "i64"
+                | "u8"  | "u16" | "u32" | "u64"
+                | "f32" | "f64"
+                | "bool"| "char"
+
+
+(* ------------------------------------------------------------------ *)
+(*  TERMİNATÖRLER  (operatör veya unary başlatamaz)                   *)
+(* ------------------------------------------------------------------ *)
+
+(*
+  ; ( ) { } ,   →  expression / tip / blok sınırları
+  = :           →  Assign ve TypeBind tarafından ayrı yakalanır
+*)
+
+
+(* ================================================================== *)
+(*  ÖNCELIK TABLOSU  (düşük → yüksek)                                 *)
+(*                                                                    *)
+(*   Seviye  Kural       Sembol        Çağrışım                       *)
+(*   ──────  ─────────   ──────────    ─────────                      *)
+(*     1     Assign      =             Sağ                            *)
+(*     2     TypeBind    :             Sağ   (sağ → TypeExpr)         *)
+(*     3     Binary      tüm op'lar    Sol                            *)
+(*     4     Unary       !  -  ~  …    —     (önek)                   *)
+(*     5     Term        ()  {}  lit   —                              *)
+(*     —     TypeExpr    ->            Sağ   (yalnızca : sağında)     *)
+(* ================================================================== *)

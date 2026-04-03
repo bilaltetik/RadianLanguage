@@ -1,0 +1,29 @@
+# Çok karakterli semboller — uzunluğa göre sıralı (en uzun önce)
+# Her satıra bir sembol. '#' ile başlayan satırlar yorum satırıdır.
+
+# Üç karakterli
+<<=
+>>=
+...
+**=
+
+# İki karakterli
+==
+!=
+<=
+>=
+->
+=>
+::
+++
+--
++=
+-=
+*=
+/=
+%=
+**
+&&
+||
+<<
+>>
