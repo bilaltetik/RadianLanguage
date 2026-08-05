@@ -956,6 +956,14 @@ if __name__ == "__main__":
         ("İndeksleme",            "v = xs[i + 1];"),
         ("Zincir",                "obj.items[0](arg);"),
 
+        # --- Harita / yapı / modül ---
+        ("Harita literali",       'm = #["a": 1, "b": 2];'),
+        ("Harita erişimi",        'v = m["a"];'),
+        ("Yapı tanımı",           "struct Nokta (x:i32, y:i32);"),
+        ("Yapı kurma + alan",     "p = Nokta(3, 4); p.x;"),
+        ("Modül import",          'geo = import "lib/geometri.rad";'),
+        ("Artır / azalt",         "x++; ++y; xs[0]--;"),
+
         # --- Blok ---
         ("Blok değer",            "r = { a = 1; a + 2; };"),
 
