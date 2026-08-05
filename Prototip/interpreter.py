@@ -16,6 +16,7 @@ Tasarım notları (ayrıntı için PROGRESS.md §2):
   - Koşullar ve mantıksal operatörler kesin olarak bool ister.
 """
 
+import os
 import sys
 
 from parser import Node, NodeType, ParseError, parse_source
@@ -165,6 +166,21 @@ class StructInstance:
         return f"{self.name}({inner})"
 
 
+class Module:
+    """`import` ile yüklenen bir dosyanın üst düzey tanımları."""
+
+    def __init__(self, path: str, values: dict):
+        self.path   = path
+        self.values = values
+
+    @property
+    def name(self) -> str:
+        return os.path.basename(self.path)
+
+    def __repr__(self):
+        return f"<modül {self.name}>"
+
+
 CALLABLE_TYPES = (Function, Builtin, BoundMethod, StructType)
 
 
@@ -250,6 +266,8 @@ def type_name(value) -> str:
         return value.name
     if isinstance(value, StructType):
         return "struct"
+    if isinstance(value, Module):
+        return "module"
     if isinstance(value, CALLABLE_TYPES):
         return "func"
     if value is UNIT:
@@ -437,6 +455,8 @@ def to_display(value, _seen: set | None = None) -> str:
             return "[...]"                        # döngüsel referans
         seen = seen | {id(value)}
         return "[" + ", ".join(to_repr(v, seen) for v in value) + "]"
+    if isinstance(value, Module):
+        return f"<modül {value.name}>"
     if isinstance(value, StructInstance):
         seen = _seen or set()
         if id(value) in seen:
@@ -550,11 +570,17 @@ PYTHON_REC_LIMIT = 20000
 
 class Interpreter:
 
-    def __init__(self, out=None, max_depth: int = MAX_CALL_DEPTH):
+    def __init__(self, out=None, max_depth: int = MAX_CALL_DEPTH,
+                 base_dir: str | None = None,
+                 symbols_file: str = "symbols.txt"):
         self.out       = out if out is not None else sys.stdout
         self.globals   = Environment()
         self.max_depth = max_depth
         self.depth     = 0
+        self.base_dir  = base_dir or os.getcwd()   # göreli import kökü
+        self.symbols_file = symbols_file           # import edilen dosyalar için
+        self.modules: dict[str, Module] = {}       # önbellek: gerçek yol → modül
+        self._loading: set[str] = set()            # döngüsel import denetimi
         if sys.getrecursionlimit() < PYTHON_REC_LIMIT:
             sys.setrecursionlimit(PYTHON_REC_LIMIT)
         self._install_builtins()
@@ -587,8 +613,17 @@ class Interpreter:
             result = self.call(main, [], None)
         return result
 
-    def run_source(self, source: str, symbols_file: str = "symbols.txt"):
-        return self.run(parse_source(source, symbols_file=symbols_file))
+    def run_source(self, source: str, symbols_file: str | None = None):
+        if symbols_file is not None:
+            self.symbols_file = symbols_file       # import'lar da bunu kullanır
+        return self.run(parse_source(source, symbols_file=self.symbols_file))
+
+    def run_file(self, path: str, symbols_file: str | None = None):
+        """Bir dosyayı çalıştırır; göreli import'lar dosyanın dizinine göredir."""
+        path = os.path.abspath(path)
+        self.base_dir = os.path.dirname(path)
+        with open(path, encoding="utf-8") as fh:
+            return self.run_source(fh.read(), symbols_file=symbols_file)
 
     # ------------------------------------------------------------------
     # Dağıtıcı
@@ -996,6 +1031,12 @@ class Interpreter:
         obj  = self.eval(node.children[0], env)
         name = node.value.value
 
+        if isinstance(obj, Module):
+            if name not in obj.values:
+                raise RadianError(
+                    f"'{obj.name}' modülünde '{name}' tanımı yok", node)
+            return obj.values[name]
+
         if isinstance(obj, StructInstance):
             if name not in obj.values:
                 raise RadianError(
@@ -1106,6 +1147,52 @@ class Interpreter:
     # Akış denetimi
     # ------------------------------------------------------------------
 
+    def _eval_import(self, node: Node, env: Environment):
+        """import "yol.rad"  →  dosyayı bir kez çalıştırır, modül değeri döner."""
+        raw = self.eval(node.children[0], env)
+        if not isinstance(raw, str):
+            raise RadianError(
+                f"import bir dosya yolu (str) bekler, {type_name(raw)} bulundu",
+                node)
+
+        path = raw if os.path.isabs(raw) else os.path.join(self.base_dir, raw)
+        path = os.path.realpath(path)
+
+        if path in self.modules:
+            return self.modules[path]                # önbellek
+        if path in self._loading:
+            raise RadianError(f"Döngüsel import: {raw}", node)
+        if not os.path.exists(path):
+            raise RadianError(f"Modül bulunamadı: {raw}", node)
+
+        try:
+            with open(path, encoding="utf-8") as fh:
+                source = fh.read()
+        except OSError as err:
+            raise RadianError(f"Modül okunamadı: {raw} ({err})", node) from None
+
+        try:
+            program = parse_source(source, symbols_file=self.symbols_file)
+        except ParseError as err:
+            raise RadianError(f"'{raw}' içinde sözdizimi hatası: {err}",
+                              node) from None
+
+        # Modül kendi kapsamında çalışır; yerleşiklere globals üzerinden erişir.
+        scope     = Environment(self.globals)
+        prev_dir  = self.base_dir
+        self._loading.add(path)
+        self.base_dir = os.path.dirname(path)
+        try:
+            for child in program.children:
+                self.eval(child, scope)
+        finally:
+            self.base_dir = prev_dir
+            self._loading.discard(path)
+
+        module = Module(path, scope.values)
+        self.modules[path] = module
+        return module
+
     def _eval_if(self, node: Node, env: Environment):
         cond = self.eval(node.children[0], env)
         self._require_bool(cond, "if", node)
@@ -1197,6 +1284,7 @@ Interpreter._DISPATCH = {
     NodeType.ARRAY:      Interpreter._eval_array,
     NodeType.MAP:        Interpreter._eval_map,
     NodeType.STRUCT_DEF: Interpreter._eval_struct_def,
+    NodeType.IMPORT:     Interpreter._eval_import,
     NodeType.INDEX:      Interpreter._eval_index,
     NodeType.MEMBER:     Interpreter._eval_member,
     NodeType.CALL:       Interpreter._eval_call,

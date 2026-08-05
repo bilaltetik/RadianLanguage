@@ -1,0 +1,24 @@
+// Modüller — `import` bir ifadedir, modül değeri döndürür.
+//
+// Yol, import eden dosyanın dizinine göre çözülür. Aynı dosya bir kez
+// çalıştırılır ve sonuç önbelleğe alınır; döngüsel import hatadır.
+
+geo = import "lib/geometri.rad";
+
+main () -> i32 {
+    print("PI            :", geo.PI);
+    print("daire alanı(2):", geo.daire_alani(2.0));
+    print("çevre(2)      :", geo.daire_cevresi(2.0));
+
+    // Modüldeki yapılar da kurucu olarak kullanılabilir
+    a = geo.Vektor(3.0, 4.0);
+    b = geo.Vektor(1.0, 2.0);
+    print("uzunluk(a)    :", geo.uzunluk(a));
+    print("a + b         :", geo.topla(a, b));
+
+    // Aynı modülü tekrar import etmek aynı nesneyi verir (önbellek)
+    yine = import "lib/geometri.rad";
+    print("aynı modül mü :", yine.PI == geo.PI);
+
+    0;
+}

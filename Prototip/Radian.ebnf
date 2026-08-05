@@ -208,6 +208,7 @@ Primary         = "(" Expression ")"
                 | Block
                 | ArrayLiteral
                 | MapLiteral
+                | ImportExpr
                 | IfExpr
                 | WhileExpr
                 | ForExpr
@@ -235,6 +236,22 @@ MapEntry        = Binary ":" Expression
 (* ------------------------------------------------------------------ *)
 (*  AKIŞ DENETİMİ  (hepsi birer ifadedir — değer döndürürler)         *)
 (* ------------------------------------------------------------------ *)
+
+ImportExpr      = "import" Unary
+
+(*
+  `import` bir ifadedir ve modül değeri döndürür:
+
+    geo = import "lib/geometri.rad";
+    geo.daire_alani(2.0);
+
+  - Yol, import eden dosyanın dizinine göre çözülür (CLI dosya çalıştırırken
+    o dosyanın dizinini kök alır).
+  - Bir dosya bir kez çalıştırılır; sonuç gerçek yola göre önbelleğe alınır.
+  - Modül kendi kapsamında çalışır; üst düzey tanımlarının tümü dışarıdan
+    `modül.ad` biçiminde görünür. Döngüsel import hatadır.
+*)
+
 
 IfExpr          = "if" Expression Block [ "else" ( IfExpr | Block ) ]
 
@@ -337,6 +354,7 @@ PrimitiveType   = "i8"  | "i16" | "i32" | "i64"
 
 (*
   if  else  while  for  in  return  break  continue  true  false  struct
+  import
 
   Lexer bunları T_IDENTIFIER olarak üretir; ayrımı parser yapar.
   Değişken adı olarak kullanılamazlar ("true"/"false" birer literaldir).

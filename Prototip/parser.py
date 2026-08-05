@@ -35,8 +35,9 @@ class NodeType(Enum):
     ARRAY      = auto()  # children = elemanlar                       →  [1, 2]
     MAP        = auto()  # children = [anahtar, değer, …] ikişerli    →  #["a": 1]
 
-    # --- 0.5 yaması: kayıt tipleri ---
+    # --- 0.5 yaması: kayıt tipleri ve modüller ---
     STRUCT_DEF = auto()  # value = yapı adı, children = [TYPE_PARAM …]
+    IMPORT     = auto()  # value = "import", children = [yol ifadesi]
     IF         = auto()  # children = [koşul, then-Block, else?]
     WHILE      = auto()  # children = [koşul, gövde-Block]
     FOR        = auto()  # value = döngü değişkeni, children = [dizi, gövde]
@@ -62,7 +63,7 @@ TERMINATORS = {";", "(", ")", "{", "}", "[", "]", ","}
 KEYWORDS = {
     "if", "else", "while", "for", "in",
     "return", "break", "continue",
-    "true", "false", "struct",
+    "true", "false", "struct", "import",
 }
 
 # Değer üreten anahtar sözcükler (LITERAL düğümü olurlar)
@@ -564,6 +565,9 @@ class Parser:
         if self.match("#") and self.peek(1) is not None and self.peek(1).value == "[":
             return self._parse_map()
 
+        if self.match_keyword("import"):
+            return self._parse_import()
+
         if self.match_keyword("if"):
             return self._parse_if()
 
@@ -663,6 +667,20 @@ class Parser:
                                  self.current())
 
         self.expect("]")
+        return node
+
+    # ------------------------------------------------------------------
+    # ImportExpr = "import" Unary
+    #
+    # Bir ifadedir; modül değeri döndürür:
+    #   mat = import "matematik.rad";
+    #   mat.kare(3);
+    # ------------------------------------------------------------------
+
+    def _parse_import(self) -> Node:
+        tok  = self.advance()                            # "import"
+        node = Node(NodeType.IMPORT, tok)
+        node.add(self._parse_unary())                    # yol ifadesi
         return node
 
     # ------------------------------------------------------------------

@@ -68,7 +68,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [ ] Statik tip denetleyicisi (çalışma zamanı yerine parse sonrası).
 - [x] Harita (map) tipi: `#[k: v]` literali, indeksleme/atama, 10 metot.
 - [x] `struct` / kayıt tipleri (`struct Ad (alan:Tip);`, kurucu + alan erişimi).
-- [ ] Modül / `import` sistemi.
+- [x] Modül / `import` sistemi (ifade biçiminde, önbellekli, döngü denetimli).
 
 ### Faz 5 — Kalite / dokümantasyon
 - [x] `Grammer.md` ve `Radian.ebnf` kodla senkron; belge örnekleri testlerde çalışıyor.
@@ -98,6 +98,8 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 15 | Negatif indeks hatadır (Python'daki sondan sayma yok). | Sınır dışı erişimi sessizce başka bir elemana çevirmemek için. |
 | 16 | `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır; 0..255 arası dönüş değeri süreç çıkış kodudur. | `main () -> i32 { … }` örneğinin dokümanlardaki anlamını gerçeklemek için. |
 | 17 | İfade konumundaki primitive tip adı (`bool`, `char`) aynı adlı bir değer tanımlıysa o değere çözülür. | `bool(x)` dönüşüm fonksiyonu ile `x : bool` tip adı çakışmasın diye. |
+| 25 | `import` bir ifadedir ve modül değeri döndürür; ad alanı `modül.ad` üzerinden gelir. | Bildirim biçimi (`import x from "y"`) yeni sözdizimi ve isim çakışması getirirdi; ifade biçimi mevcut `MEMBER` düğümünü kullanır ve modülü birinci sınıf değer yapar. |
+| 26 | Modül yolu, import eden dosyanın dizinine göre çözülür; modüller gerçek yola göre önbelleğe alınır. | Kütüphane dosyaları kendi komşularını çalışma dizininden bağımsız olarak import edebilsin diye. |
 | 23 | `struct Ad (alanlar);` bildirimi fonksiyon imzasıyla aynı `TypeParamList` dilbilgisini kullanır; yapı adı aynı zamanda kurucudur. | Yeni sözdizimi yüzeyi en aza iner: mevcut `CALL` ve `MEMBER` düğümleri olduğu gibi kullanılır. |
 | 24 | Yapı eşitliği: aynı `StructType` nesnesi + alan alan karşılaştırma. Alanları aynı olan iki farklı yapı asla eşit değildir. | Yapı adı bir tip kimliğidir; yapısal değil nominal eşitlik. |
 | 21 | Harita literali `#[k: v]`; `{k: v}` kullanılmadı. | `{` blok başlatıyor ve `{a: T}` TypeBind ile çakışıyor — gramerde gerçek bir belirsizlik. Anahtar `Binary` seviyesinde okunur, böylece `:` TypeBind sanılmaz. |
@@ -130,6 +132,9 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - `++` / `--` gerçeklendi (244 test yeşil).
 - Sağlamlık taraması: döngüsel dizi yazdırma çökmesi ve düşük özyineleme
   sınırı düzeltildi; düşmanca girdi tablosu teste dönüştürüldü (256 test yeşil).
+- Modül sistemi eklendi: `import` ifadesi, göreli yol çözümü, önbellek,
+  döngüsel import denetimi, `examples/moduller.rad` + `examples/lib/`
+  (323 test yeşil).
 - Kayıt tipleri (`struct`) eklendi: kurucu, alan okuma/yazma, tip konumunda
   kullanım, nominal eşitlik, `examples/yapilar.rad` (306 test yeşil).
 - Harita tipi eklendi: `#[k: v]` literali, `map()` yerleşiği, 10 metot,

@@ -35,7 +35,7 @@ USAGE = __doc__.strip()
 # Alt komutlar
 # ---------------------------------------------------------------------------
 
-def dump_tokens(source: str) -> int:
+def dump_tokens(source: str, base_dir: str | None = None) -> int:
     result = lexer(source, symbols_file=SYMBOLS_FILE)
     if isinstance(result, dict):
         print(f"Sözcüksel hata [{result['line']}:{result['column']}]: "
@@ -46,7 +46,7 @@ def dump_tokens(source: str) -> int:
     return 0
 
 
-def dump_ast(source: str) -> int:
+def dump_ast(source: str, base_dir: str | None = None) -> int:
     try:
         print(parse_source(source, symbols_file=SYMBOLS_FILE), end="")
     except ParseError as err:
@@ -55,10 +55,10 @@ def dump_ast(source: str) -> int:
     return 0
 
 
-def run_source(source: str) -> int:
-    interp = Interpreter()
+def run_source(source: str, base_dir: str | None = None) -> int:
+    interp = Interpreter(base_dir=base_dir, symbols_file=SYMBOLS_FILE)
     try:
-        value = interp.run_source(source, symbols_file=SYMBOLS_FILE)
+        value = interp.run_source(source)
     except ParseError as err:
         print(f"Sözdizimi hatası: {err}", file=sys.stderr)
         return 1
@@ -105,7 +105,7 @@ def _is_complete(source: str) -> bool:
 
 
 def repl() -> int:
-    interp = Interpreter()
+    interp = Interpreter(symbols_file=SYMBOLS_FILE)
     print("Radian REPL — çıkmak için Ctrl-D (ya da 'exit')")
     buffer = ""
 
@@ -130,7 +130,7 @@ def repl() -> int:
 
         source, buffer = buffer, ""
         try:
-            value = interp.run_source(source, symbols_file=SYMBOLS_FILE)
+            value = interp.run_source(source)
             if value is not UNIT:
                 print(to_display(value))
         except ParseError as err:
@@ -184,7 +184,10 @@ def main(argv: list[str]) -> int:
     with open(path, encoding="utf-8") as fh:
         source = fh.read()
 
-    return {"run": run_source, "tokens": dump_tokens, "ast": dump_ast}[mode](source)
+    # Göreli import'lar çalıştırılan dosyanın dizinine göre çözülür.
+    base_dir = os.path.dirname(os.path.abspath(path))
+    return {"run": run_source, "tokens": dump_tokens,
+            "ast": dump_ast}[mode](source, base_dir)
 
 
 if __name__ == "__main__":

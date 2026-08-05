@@ -27,6 +27,9 @@ EXAMPLES = [
     ("closure.rad",   ["a: 1 2 3", "b: 1", "kasa: 110 115"]),
     ("yapilar.rad",   ["uzaklık : 5.0", "kapsıyor: true", "en genç        : ada",
                        "Cember(merkez: Nokta(x: 0.0, y: 0.0), yaricap: 5.0)"]),
+    ("moduller.rad",  ["PI            : 3.141592653589793",
+                       "a + b         : Vektor(x: 4.0, y: 6.0)",
+                       "aynı modül mü : true"]),
     ("haritalar.rad", ['Japonya    : Tokyo', "kaç ülke   : 3",
                        'sayım      : #["bir": 3, "iki": 2, "üç": 1]',
                        "varsayılan : bilinmiyor"]),
@@ -34,18 +37,20 @@ EXAMPLES = [
 
 
 def run_example(filename: str) -> str:
-    path = os.path.join(EXAMPLES_DIR, filename)
-    with open(path, encoding="utf-8") as fh:
-        source = fh.read()
+    path   = os.path.join(EXAMPLES_DIR, filename)
     buffer = io.StringIO()
-    Interpreter(out=buffer).run_source(source, symbols_file=SYMBOLS_FILE)
+    Interpreter(out=buffer, symbols_file=SYMBOLS_FILE).run_file(path)
     return buffer.getvalue()
 
 
 class TestExamples(unittest.TestCase):
 
     def test_tum_ornekler_kayitli(self):
-        """examples/ içindeki her .rad dosyasının bir testi olmalı."""
+        """examples/ kökündeki her .rad dosyasının bir testi olmalı.
+
+        Alt dizinler (örn. lib/) modül olarak import edilir; doğrudan
+        çalıştırılmadıkları için kayıt gerektirmezler.
+        """
         on_disk = {f for f in os.listdir(EXAMPLES_DIR) if f.endswith(".rad")}
         self.assertEqual(on_disk, {name for name, _ in EXAMPLES})
 

@@ -46,6 +46,7 @@ python3 run_tests.py                       # tüm testler
 | Akış denetimi | `if`/`else if`/`else`, `while`, `for … in`, `break`, `continue`, `return` |
 | Fonksiyonlar | özyineleme, closure, yüksek mertebeden fonksiyonlar, currying |
 | Veri işleme | dizi/harita/string metotları: `map` `filter` `reduce` `sort` `split` `join` `keys` … |
+| Modüller | `import "lib/geometri.rad"` — bir ifadedir, modül değeri döndürür |
 | Diğer | `//` ve `/* */` yorumları, blok = ifade (son statement'ın değeri) |
 
 Kendi veri tiplerini `struct` ile tanımlarsın; yapı adı hem tip hem kurucudur:
@@ -82,7 +83,7 @@ Prototip/
 ├── Radian.ebnf              canonical BNF grameri
 ├── Grammer.md               dil referansı: öncelik, semantik, node tipleri
 ├── PARSER_UPDATE_GUIDE.md   parser'ı genişletme rehberi
-├── examples/*.rad           çalışan örnek programlar
+├── examples/*.rad           çalışan örnek programlar (lib/ altı import edilir)
 ├── tests/                   unittest paketi (lexer/parser/yorumlayıcı/uçtan uca/belge)
 └── run_tests.py             test koşucusu
 ```

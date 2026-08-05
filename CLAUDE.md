@@ -40,7 +40,7 @@ Scripts are meant to be run with `Prototip/` as the working directory
 ```bash
 cd Prototip
 
-python3 run_tests.py              # full suite (~306 tests)
+python3 run_tests.py              # full suite (~323 tests)
 python3 run_tests.py -v           # verbose
 python3 run_tests.py test_parser  # one module
 
@@ -60,7 +60,8 @@ New behaviour needs a test in `tests/` — the `__main__` case tables in
 Test modules: `test_lexer`, `test_parser`, `test_interpreter`, `test_examples`
 (runs every `examples/*.rad` end to end plus the CLI via subprocess),
 `test_robustness` (asserts that only ParseError/RadianError can escape, for a
-table of hostile inputs), and `test_docs` (executes every ` ```radian ` block in `Grammer.md`, `README.md`,
+table of hostile inputs), `test_modules` (import semantics in temp dirs), and
+`test_docs` (executes every ` ```radian ` block in `Grammer.md`, `README.md`,
 and `PARSER_UPDATE_GUIDE.md`). Consequences worth knowing:
 
 - Adding a file to `examples/` **requires** adding an entry to `EXAMPLES` in
@@ -124,6 +125,9 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
 
 - Values are plain Python objects (`int`, `float`, `str`, `bool`, `list`, `dict`)
   plus `Function`, `Builtin`, `BoundMethod`, and the `UNIT` singleton.
+- `import "path.rad"` is an expression returning a `Module`; paths resolve
+  against the importing file's directory (`Interpreter.base_dir`, set by
+  `run_file`), modules are cached by realpath, and cycles are an error.
 - `struct Ad (alan:Tip, …);` defines a `StructType`, which is callable as a
   positional constructor and usable as a type name; instances are
   `StructInstance`. `check_type` takes an optional `env` so a struct name in

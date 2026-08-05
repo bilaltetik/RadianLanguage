@@ -83,12 +83,13 @@ ArgumentList  = Expression { "," Expression }
 Primary       = "(" Expression ")"
               | Block
               | ArrayLiteral | MapLiteral
-              | IfExpr | WhileExpr | ForExpr
+              | IfExpr | WhileExpr | ForExpr | ImportExpr
               | Literal
 
 ArrayLiteral  = "[" [ Expression { "," Expression } [ "," ] ] "]"
 MapLiteral    = "#" "[" [ MapEntry { "," MapEntry } [ "," ] ] "]"
 MapEntry      = Binary ":" Expression
+ImportExpr    = "import" Unary
 
 (* ──────────── AKIŞ DENETİMİ (hepsi ifadedir) ──────────── *)
 
@@ -127,7 +128,8 @@ PrimitiveType = "i8"  | "i16" | "i32" | "i64"
               | "f32" | "f64" | "bool" | "char"
 ```
 
-**Anahtar sözcükler:** `if else while for in return break continue true false struct`
+**Anahtar sözcükler:** `if else while for in return break continue true false
+struct import`
 Lexer bunları `T_IDENTIFIER` olarak üretir; ayrımı parser yapar.
 
 **Yorumlar:** `// satır sonuna kadar` ve `/* blok */` — lexer'da atılır,
@@ -468,6 +470,28 @@ assert(harfler == "naidar");
 - String'ler indekslenebilir ve `for` ile gezilebilir; `s[0]` tek karakterlik
   bir string döndürür.
 
+### Modüller — `import`
+
+`import "yol.rad"` bir **ifadedir**; dosyayı çalıştırıp modül değeri döndürür.
+Modülün üst düzey tanımlarının tümü (değişken, fonksiyon, yapı) `modül.ad`
+biçiminde görünür.
+
+```
+geo = import "lib/geometri.rad";
+geo.daire_alani(2.0);
+geo.Vektor(3.0, 4.0);
+```
+
+- Yol, **import eden dosyanın dizinine** göre çözülür; mutlak yol da verilebilir.
+- Bir dosya **bir kez** çalıştırılır; sonuç gerçek yola göre önbelleğe alınır,
+  ikinci `import` aynı modül nesnesini verir.
+- Modül kendi kapsamında çalışır; yerleşiklere erişir ama import edenin
+  değişkenlerini görmez ve onun kapsamını kirletmez.
+- **Döngüsel import hatadır**; eksik dosya ve modül içi sözdizimi hataları
+  import eden satırı işaret eder.
+
+---
+
 ### Kayıt tipleri (struct)
 
 `struct Ad (alan:Tip, …);` bir kayıt tipi tanımlar. Yapı adı hem tip hem
@@ -607,6 +631,7 @@ main () -> i32 {
 | `[T]` | Python `list` | `"array"` |
 | `map` | Python `dict` | `"map"` |
 | kayıt | `StructInstance` | yapının adı (örn. `"Nokta"`) |
+| modül | `Module` | `"module"` |
 | fonksiyon | `Function` / `Builtin` | `"func"` |
 | unit | `UNIT` | `"unit"` |
 
@@ -703,6 +728,7 @@ aralığındaki tamsayı değer süreç çıkış kodudur.
 | `ARRAY` | `_parse_array` / `_parse_tuple_type_expr` | `[` token'ı | `[eleman …]` ya da `[eleman tipi]` |
 | `MAP` | `_parse_map` | `#` token'ı | `[anahtar, değer, …]` (ikişerli) |
 | `STRUCT_DEF` | `_parse_struct` | yapı adı token'ı | `[TYPE_PARAM …]` (alanlar) |
+| `IMPORT` | `_parse_import` | `import` token'ı | `[yol ifadesi]` |
 | `IF` | `_parse_if` | `if` token'ı | `[koşul, then, else?]` |
 | `WHILE` | `_parse_while` | `while` token'ı | `[koşul, gövde]` |
 | `FOR` | `_parse_for` | döngü değişkeni token'ı | `[dizi, gövde]` |
@@ -787,5 +813,4 @@ Güncel durum ve öncelikler için depo kökündeki `PROGRESS.md`.
 | 2 | Statik tip denetleyicisi | 🟡 Orta | Şu an tüm denetim çalışma zamanında |
 | 5 | Opsiyonel tip `T?` | 🟢 Düşük | TypeExpr genişletmesi |
 | 6 | Generic tipler `T<A>` | ⚪ Uzak | TypeExpr büyük genişletme |
-| 7 | Import / modül sistemi | ⚪ Uzak | Şu an tek dosya |
 | 8 | Bytecode VM / kod üretimi | ⚪ Uzak | Yorumlayıcı referans gerçekleme olarak kalır |
