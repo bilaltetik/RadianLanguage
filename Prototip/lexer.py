@@ -38,6 +38,13 @@ def load_multi_char_symbols(filepath: str = "symbols.txt") -> list[str]:
     Yorum satırları ('#') ve boş satırlar atlanır.
     Greedy (en uzun eşleşme) için uzunluğa göre azalan sırada döner.
     """
+    if not os.path.exists(filepath) and not os.path.isabs(filepath):
+        # Çalışma dizini farklıysa modülün yanındaki dosyaya düş
+        fallback = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                filepath)
+        if os.path.exists(fallback):
+            filepath = fallback
+
     if not os.path.exists(filepath):
         return []
     with open(filepath, encoding="utf-8") as fh:

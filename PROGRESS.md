@@ -43,20 +43,27 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] `while` — expression.
 - [x] `return` — statement.
 - [x] `true` / `false` boolean literalleri.
-- [ ] Tree-walking yorumlayıcı (`interpreter.py`).
-- [ ] CLI: `radian.py <dosya.rad>`.
-- [ ] Yerleşik fonksiyonlar (`print`, `len`, ...).
+- [x] Tree-walking yorumlayıcı (`interpreter.py`).
+- [x] CLI: `radian.py <dosya.rad>`.
+- [x] Yerleşik fonksiyonlar (`print`, `len`, ...).
 - [x] Dizi/liste literalleri `[1, 2, 3]` ve indeksleme `a[i]`.
-- [x] `for ... in` döngüsü (parser).
-- [x] `break` / `continue` (parser).
-- [ ] Kullanıcı fonksiyonlarında closure + özyineleme.
-- [ ] String yerleşikleri ve `str`/`int`/`float` dönüşümleri.
+- [x] `for ... in` döngüsü.
+- [x] `break` / `continue`.
+- [x] Kullanıcı fonksiyonlarında closure + özyineleme.
+- [x] String yerleşikleri ve `str`/`int`/`float` dönüşümleri.
 
 ### Faz 4 — Test kapsamı
 - [x] Lexer birim testleri.
 - [x] Parser birim testleri.
-- [ ] Yorumlayıcı birim testleri.
-- [ ] Uçtan uca (`examples/*.rad`) testleri.
+- [x] Yorumlayıcı birim testleri.
+- [x] Uçtan uca (`examples/*.rad`) testleri.
+
+### Faz 6 — Sonraki adaylar (henüz başlanmadı)
+- [ ] `++` / `--` sembolleri `symbols.txt`'de tanımlı ama dilde karşılığı yok
+      (`--5` sözdizimi hatası verir). Ya gerçeklenmeli ya da kaldırılmalı.
+- [ ] Statik tip denetleyicisi (çalışma zamanı yerine parse sonrası).
+- [ ] Sözlük/map tipi, `struct`/kayıt tipleri.
+- [ ] Modül / `import` sistemi.
 
 ### Faz 5 — Kalite / dokümantasyon
 - [ ] `Grammer.md`, `Radian.ebnf`, `PARSER_UPDATE_GUIDE.md` kodla senkron.
@@ -79,6 +86,11 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 10 | Unary operatörler sabit bir kümeyle sınırlı (`- + ! ~`). | Eskiden "ardında terim olan her sembol" unary sayılıyordu; `* x` gibi anlamsız girdiler sessizce kabul ediliyordu. |
 | 11 | `if`/`while`/`for`/blok ile biten statement'larda `;` opsiyonel. | Rust benzeri; `if a { … }` sonuna `;` koymak zorunda kalmamak. |
 | 12 | Bileşik atamalar (`+=`, `<<=` …) Assign katmanında; yorumlayıcı `a = a op b` olarak çözer. | Binary katmanına düşseydi `a += 1` ifadesi anlamsız bir binary düğüm üretirdi. |
+| 13 | Diziler referans değerdir; atama kopya çıkarmaz. | `xs.push(…)` gibi yerinde değişen metotlar için tek tutarlı semantik. |
+| 14 | Tamsayı bölmesi C semantiğinde (sıfıra doğru kırpar), `%` işareti bölünene uyar; iki taraf da tamsayıysa sonuç tamsayıdır. | Sistem dili hedefi; `7 / 2 == 3`, `-7 / 2 == -3`. |
+| 15 | Negatif indeks hatadır (Python'daki sondan sayma yok). | Sınır dışı erişimi sessizce başka bir elemana çevirmemek için. |
+| 16 | `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır; 0..255 arası dönüş değeri süreç çıkış kodudur. | `main () -> i32 { … }` örneğinin dokümanlardaki anlamını gerçeklemek için. |
+| 17 | İfade konumundaki primitive tip adı (`bool`, `char`) aynı adlı bir değer tanımlıysa o değere çözülür. | `bool(x)` dönüşüm fonksiyonu ile `x : bool` tip adı çakışmasın diye. |
 | 8 | Dizi indeksleme `a[i]` postfix zincirinde; `[` tek karakterli sembol olarak zaten lexleniyor. | Çağrı/üye erişimiyle aynı katman → `a.b[0](x)` doğal çalışır. |
 
 ---
@@ -90,6 +102,11 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - Test altyapısı kuruldu: `Prototip/tests/` + `run_tests.py` (56 test, tümü yeşil).
 - Lexer: `//` ve `/* */` yorumları, kapatılmamış sabit/yorum ve eksik sayısal
   önek/üs için doğru konumlu net hatalar (67 test yeşil).
+- Yorumlayıcı (`interpreter.py`): kapsam zinciri, closure, özyineleme, tip
+  doğrulama (tamsayı aralıkları dahil), 14 genel yerleşik + dizi/string/sayı
+  metotları, akış denetimi sinyalleri.
+- CLI (`radian.py`): dosya çalıştırma, `-c`, `--ast`, `--tokens`, REPL.
+- `examples/` altında 6 çalışan örnek program + uçtan uca testler (223 test yeşil).
 - Parser: fonksiyon çağrısı + postfix zinciri (`a.b[0](x)`), 11 katmanlı
   operatör önceliği, `if`/`else if`/`while`/`for`/`return`/`break`/`continue`,
   dizi literali ve dizi tipi, bileşik atamalar, iç fonksiyon tanımı (114 test yeşil).

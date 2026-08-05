@@ -1,0 +1,34 @@
+// Tip bağlama (":") ve tip dili örnekleri.
+//
+// Tipler bağlama anında doğrulanır; dönüşüm (coercion) yapılmaz.
+
+main () -> i32 {
+    // Değersiz bildirim → tipin sıfır değeri
+    sayac : i32;
+    isim  : str;
+    bayrak : bool;
+    print("sıfır değerleri:", sayac, isim, bayrak);
+
+    // Tip + atama
+    yas : u8 = 42;
+    oran : f64 = 0.75;
+    print("yas =", yas, ", oran =", oran);
+
+    // Dizi tipi: eleman tipleri de denetlenir
+    kareler : [i32] = [1, 4, 9];
+    print("kareler:", kareler);
+
+    // Aralık denetimi: u8 için 0..255
+    // yas = 300;   ← "Değer u8 aralığının dışında" hatası verirdi
+
+    // Fonksiyon tipi bildirimi — imza ayrı, gövde ayrı verilebilir
+    ikiyle_carp : (x:i32) -> i32;
+    ikiyle_carp (x:i32) -> i32 { x * 2; }
+    print("ikiyle_carp(21) =", ikiyle_carp(21));
+
+    // Yüksek mertebeden fonksiyon
+    uygula (f:(x:i32) -> i32, v:i32) -> i32 { f(v); }
+    print("uygula(ikiyle_carp, 5) =", uygula(ikiyle_carp, 5));
+
+    0;
+}

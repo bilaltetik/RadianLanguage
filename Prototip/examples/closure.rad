@@ -1,0 +1,27 @@
+// Closure (kapanış) — iç fonksiyon, tanımlandığı kapsamı taşır.
+
+sayac_yap {
+    n = 0;
+    artir { n += 1; n; }
+    artir;                       // fonksiyonun kendisi döner
+}
+
+// Dönüş tipi bir fonksiyon tipidir: (x:i32) -> i32
+toplayici_yap (baslangic:i32) -> (x:i32) -> i32 {
+    toplam = baslangic;
+    ekle (x:i32) -> i32 { toplam += x; toplam; }
+    ekle;
+}
+
+main () -> i32 {
+    a = sayac_yap();
+    b = sayac_yap();             // bağımsız kapanış
+
+    print("a:", a(), a(), a());  // 1 2 3
+    print("b:", b());            // 1
+
+    kasa = toplayici_yap(100);
+    print("kasa:", kasa(10), kasa(5));   // 110 115
+
+    0;
+}

@@ -1,0 +1,7 @@
+// En küçük Radian programı.
+// `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır.
+
+main () -> i32 {
+    print("Merhaba, Dünya!");
+    0;
+}

@@ -1,0 +1,22 @@
+// FizzBuzz — if/else if zinciri ve bileşik atama.
+
+fizzbuzz (n:i32) -> str {
+    if n % 15 == 0 {
+        "FizzBuzz";
+    } else if n % 3 == 0 {
+        "Fizz";
+    } else if n % 5 == 0 {
+        "Buzz";
+    } else {
+        str(n);
+    }
+}
+
+main () -> i32 {
+    satirlar = [];
+    for n in range(1, 16) {
+        satirlar.push(fizzbuzz(n));
+    }
+    print(satirlar.join(" "));
+    0;
+}
