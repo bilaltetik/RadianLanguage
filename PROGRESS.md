@@ -33,28 +33,28 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] Lexer: `//` satır ve `/* */` blok yorumları.
 - [x] Lexer: kapatılmamış string/char hatasının satır/sütun bilgisi token başlangıcını göstersin.
 - [x] Lexer: eksik/hatalı sayısal önek (`0x`, `1e`) için net hata.
-- [ ] Parser: `_parse_call` — `f(x, y)` → `CALL` düğümü (dokümandaki drift kapandı).
-- [ ] Parser: `_parse_literal` artık gelişigüzel sembolü literal kabul etmesin.
+- [x] Parser: `_parse_call` — `f(x, y)` → `CALL` düğümü (dokümandaki drift kapandı).
+- [x] Parser: `_parse_literal` artık gelişigüzel sembolü literal kabul etmesin.
 
 ### Faz 3 — Eksik dil özellikleri
-- [ ] Operatör öncelik katmanları (`*` > `+` > karşılaştırma > `&&` > `||`).
-- [ ] Üye erişimi `a.b` (postfix, `MEMBER` düğümü).
-- [ ] `if` / `else` — expression (değer döndürür).
-- [ ] `while` — expression.
-- [ ] `return` — statement.
-- [ ] `true` / `false` boolean literalleri.
+- [x] Operatör öncelik katmanları (`*` > `+` > karşılaştırma > `&&` > `||`).
+- [x] Üye erişimi `a.b` (postfix, `MEMBER` düğümü).
+- [x] `if` / `else` — expression (değer döndürür).
+- [x] `while` — expression.
+- [x] `return` — statement.
+- [x] `true` / `false` boolean literalleri.
 - [ ] Tree-walking yorumlayıcı (`interpreter.py`).
 - [ ] CLI: `radian.py <dosya.rad>`.
 - [ ] Yerleşik fonksiyonlar (`print`, `len`, ...).
-- [ ] Dizi/liste literalleri `[1, 2, 3]` ve indeksleme `a[i]`.
-- [ ] `for ... in` döngüsü.
-- [ ] `break` / `continue`.
+- [x] Dizi/liste literalleri `[1, 2, 3]` ve indeksleme `a[i]`.
+- [x] `for ... in` döngüsü (parser).
+- [x] `break` / `continue` (parser).
 - [ ] Kullanıcı fonksiyonlarında closure + özyineleme.
 - [ ] String yerleşikleri ve `str`/`int`/`float` dönüşümleri.
 
 ### Faz 4 — Test kapsamı
-- [ ] Lexer birim testleri.
-- [ ] Parser birim testleri.
+- [x] Lexer birim testleri.
+- [x] Parser birim testleri.
 - [ ] Yorumlayıcı birim testleri.
 - [ ] Uçtan uca (`examples/*.rad`) testleri.
 
@@ -75,6 +75,10 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 5 | Yorumlayıcı dinamik tipli; `:` tip bağlama şimdilik çalışma zamanında **doğrulanır** ama zorlama (coercion) yapmaz. | Statik tip denetleyicisi ayrı bir faz; erken tip zorlaması dili kullanılmaz hale getirirdi. |
 | 6 | `return` fonksiyon gövdesinden erken çıkış için Python exception'ı ile taşınır. | Tree-walking yorumlayıcıda standart ve en basit yöntem. |
 | 7 | Keyword'ler ayrı bir `TokenType` değil; parser `LITERAL_IDEN` değerine bakar. | Lexer'ı dilden bağımsız tutar (mevcut konvansiyon). |
+| 9 | Parser artık bitişik sembol token'larını birleştirmiyor; operatörler lexer'ın ürettiği tek token'dır. | Eski birleştirme `a + -b` ifadesini `a +- b` yapıyordu. Çok karakterli operatör = `symbols.txt` satırı. |
+| 10 | Unary operatörler sabit bir kümeyle sınırlı (`- + ! ~`). | Eskiden "ardında terim olan her sembol" unary sayılıyordu; `* x` gibi anlamsız girdiler sessizce kabul ediliyordu. |
+| 11 | `if`/`while`/`for`/blok ile biten statement'larda `;` opsiyonel. | Rust benzeri; `if a { … }` sonuna `;` koymak zorunda kalmamak. |
+| 12 | Bileşik atamalar (`+=`, `<<=` …) Assign katmanında; yorumlayıcı `a = a op b` olarak çözer. | Binary katmanına düşseydi `a += 1` ifadesi anlamsız bir binary düğüm üretirdi. |
 | 8 | Dizi indeksleme `a[i]` postfix zincirinde; `[` tek karakterli sembol olarak zaten lexleniyor. | Çağrı/üye erişimiyle aynı katman → `a.b[0](x)` doğal çalışır. |
 
 ---
@@ -86,3 +90,6 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - Test altyapısı kuruldu: `Prototip/tests/` + `run_tests.py` (56 test, tümü yeşil).
 - Lexer: `//` ve `/* */` yorumları, kapatılmamış sabit/yorum ve eksik sayısal
   önek/üs için doğru konumlu net hatalar (67 test yeşil).
+- Parser: fonksiyon çağrısı + postfix zinciri (`a.b[0](x)`), 11 katmanlı
+  operatör önceliği, `if`/`else if`/`while`/`for`/`return`/`break`/`continue`,
+  dizi literali ve dizi tipi, bileşik atamalar, iç fonksiyon tanımı (114 test yeşil).
