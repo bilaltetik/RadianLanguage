@@ -491,6 +491,39 @@ class TestDisplay(unittest.TestCase):
         self.assertEqual(to_display(UNIT), "()")
 
 
+class TestRobustness(unittest.TestCase):
+    """Çökme yerine düzgün hata üretilmesi gereken sınır durumları."""
+
+    def test_kendine_referans_veren_dizi_yazdirilabilir(self):
+        self.assertEqual(output("x = [1]; x[0] = x; print(x);"), "[[...]]\n")
+
+    def test_dolayli_dongusel_referans(self):
+        self.assertEqual(output("a = []; b = [a]; a.push(b); print(a);"),
+                         "[[[...]]]\n")
+
+    def test_derin_ozyineleme_calisir(self):
+        src = "say (n:i32) -> i32 { if n <= 0 { return 0; } say(n - 1); } say(900);"
+        self.assertEqual(run(src), 0)
+
+    def test_sonsuz_ozyineleme_radian_hatasi_verir(self):
+        with self.assertRaises(RadianError) as ctx:
+            run("f { f(); } f();")
+        self.assertIn("Özyineleme derinliği", str(ctx.exception))
+
+    def test_derinlik_siniri_ayarlanabilir(self):
+        interp = Interpreter(out=io.StringIO(), max_depth=10)
+        with self.assertRaises(RadianError):
+            interp.run_source(
+                "say (n:i32) -> i32 { if n <= 0 { return 0; } say(n - 1); } say(50);",
+                symbols_file=SYMBOLS_FILE)
+
+    def test_derinlik_sayaci_geri_sarilir(self):
+        # Sınıra dayanan bir çağrıdan sonra yenisi hâlâ çalışabilmeli
+        src = ("say (n:i32) -> i32 { if n <= 0 { return 0; } say(n - 1); } "
+               "say(500); say(500);")
+        self.assertEqual(run(src), 0)
+
+
 class TestErrorPositions(unittest.TestCase):
 
     def test_hata_satir_sutun_tasir(self):

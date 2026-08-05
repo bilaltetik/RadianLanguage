@@ -338,8 +338,12 @@ def zero_value(type_node: Node | None):
 # Değer gösterimi
 # ---------------------------------------------------------------------------
 
-def to_display(value) -> str:
-    """print() çıktısındaki gösterim — string'ler tırnaksızdır."""
+def to_display(value, _seen: set | None = None) -> str:
+    """print() çıktısındaki gösterim — string'ler tırnaksızdır.
+
+    Diziler referans değer olduğu için kendini içerebilirler
+    (`x = [1]; x[0] = x;`); döngü `[...]` ile kesilir.
+    """
     if isinstance(value, bool):
         return "true" if value else "false"
     if value is UNIT:
@@ -349,15 +353,19 @@ def to_display(value) -> str:
     if isinstance(value, float):
         return repr(value)
     if isinstance(value, list):
-        return "[" + ", ".join(to_repr(v) for v in value) + "]"
+        seen = _seen or set()
+        if id(value) in seen:
+            return "[...]"                        # döngüsel referans
+        seen = seen | {id(value)}
+        return "[" + ", ".join(to_repr(v, seen) for v in value) + "]"
     return repr(value)
 
 
-def to_repr(value) -> str:
+def to_repr(value, _seen: set | None = None) -> str:
     """Dizi içi gösterim — string'ler tırnaklıdır."""
     if isinstance(value, str):
         return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
-    return to_display(value)
+    return to_display(value, _seen)
 
 
 # ---------------------------------------------------------------------------
@@ -437,11 +445,23 @@ def int_mod(a: int, b: int) -> int:
 # Yorumlayıcı
 # ---------------------------------------------------------------------------
 
+# Radian çağrı yığını sınırı. Python'un kendi limiti (varsayılan 1000) bir
+# Radian çağrısı başına birkaç Python karesi tükettiği için ~160 seviyesinde
+# devreye giriyordu; kendi sayacımızla hem sınırı yükseltiyor hem de düzgün
+# bir RadianError üretiyoruz.
+MAX_CALL_DEPTH   = 1000
+PYTHON_REC_LIMIT = 20000
+
+
 class Interpreter:
 
-    def __init__(self, out=None):
-        self.out    = out if out is not None else sys.stdout
-        self.globals = Environment()
+    def __init__(self, out=None, max_depth: int = MAX_CALL_DEPTH):
+        self.out       = out if out is not None else sys.stdout
+        self.globals   = Environment()
+        self.max_depth = max_depth
+        self.depth     = 0
+        if sys.getrecursionlimit() < PYTHON_REC_LIMIT:
+            sys.setrecursionlimit(PYTHON_REC_LIMIT)
         self._install_builtins()
 
     # ------------------------------------------------------------------
@@ -463,6 +483,9 @@ class Interpreter:
             raise RadianError("Fonksiyon dışında 'return'") from None
         except (BreakSignal, ContinueSignal):
             raise RadianError("Döngü dışında 'break' / 'continue'") from None
+        except RecursionError:
+            # Çağrı sayacına takılmayan derin özyineleme (örn. iç içe ifade)
+            raise RadianError("Yorumlayıcı yığını taştı") from None
 
         main = self.globals.values.get("main")
         if isinstance(main, Function) and main.arity == 0:
@@ -847,11 +870,17 @@ class Interpreter:
                     f"'{callee.name}' {callee.arity} argüman bekliyor, "
                     f"{len(args)} verildi", node)
 
+            if self.depth >= self.max_depth:
+                raise RadianError(
+                    f"Özyineleme derinliği aşıldı ({self.max_depth}): "
+                    f"'{callee.name}'", node)
+
             scope = Environment(callee.closure)
             for (pname, ptype), value in zip(callee.params, args):
                 check_type(value, ptype, pname, node)
                 scope.define(pname, value, ptype)
 
+            self.depth += 1
             try:
                 result = self._eval_block_in(callee.body, scope)
             except ReturnSignal as signal:
@@ -861,6 +890,8 @@ class Interpreter:
                 raise RadianError(
                     f"'{callee.name}' içinde döngü dışında break/continue",
                     node) from None
+            finally:
+                self.depth -= 1
 
             if callee.return_type is not None:
                 check_type(result, callee.return_type,
