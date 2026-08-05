@@ -694,6 +694,21 @@ assert((-3).abs() == 3);
 assert(type([1]) == "array");
 ```
 
+### Hata raporlama
+
+Çalışma zamanı hataları `RadianError`'dır ve konum bilgisi taşır. Hata bir
+fonksiyon çağrısının içinden geliyorsa çağrı yığını da birikir:
+
+```
+Çalışma zamanı hatası: Sıfıra bölme [2:5]
+  çağrı yığını (içten dışa):
+    bol (satır 6)
+    orta (satır 10)
+    main
+```
+
+Satır numarası, o çerçeveyi **çağıran** ifadenin satırıdır.
+
 ### Program akışı
 
 Üst düzey statement'lar sırayla çalışır. Sonrasında **argümansız bir `main`**

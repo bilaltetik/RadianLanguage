@@ -59,6 +59,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] Uçtan uca (`examples/*.rad`) testleri.
 
 ### Faz 6 — Sağlamlık ve sonraki adaylar
+- [x] Çalışma zamanı hatalarında çağrı yığını (`RadianError.frames`).
 - [x] `++` / `--` gerçeklendi (önek `PRE_OP`, sonek `POST_OP`; hedef lvalue
       olmalı, parse zamanında doğrulanır).
 - [x] Sağlamlık taraması: bozuk girdiden yalnızca `ParseError`/`RadianError`
@@ -132,6 +133,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - `++` / `--` gerçeklendi (244 test yeşil).
 - Sağlamlık taraması: döngüsel dizi yazdırma çökmesi ve düşük özyineleme
   sınırı düzeltildi; düşmanca girdi tablosu teste dönüştürüldü (256 test yeşil).
+- Çalışma zamanı hataları artık çağrı yığını gösteriyor (327 test yeşil).
 - Modül sistemi eklendi: `import` ifadesi, göreli yol çözümü, önbellek,
   döngüsel import denetimi, `examples/moduller.rad` + `examples/lib/`
   (323 test yeşil).

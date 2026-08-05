@@ -64,6 +64,9 @@ def run_source(source: str, base_dir: str | None = None) -> int:
         return 1
     except RadianError as err:
         print(f"Çalışma zamanı hatası: {err}", file=sys.stderr)
+        trace = err.traceback_text()
+        if trace:
+            print(trace, file=sys.stderr)
         return 1
     except RecursionError:
         print("Çalışma zamanı hatası: özyineleme derinliği aşıldı",
@@ -137,6 +140,9 @@ def repl() -> int:
             print(f"Sözdizimi hatası: {err}", file=sys.stderr)
         except RadianError as err:
             print(f"Çalışma zamanı hatası: {err}", file=sys.stderr)
+            trace = err.traceback_text()
+            if trace:
+                print(trace, file=sys.stderr)
         except RecursionError:
             print("Çalışma zamanı hatası: özyineleme derinliği aşıldı",
                   file=sys.stderr)

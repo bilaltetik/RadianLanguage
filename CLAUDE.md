@@ -40,7 +40,7 @@ Scripts are meant to be run with `Prototip/` as the working directory
 ```bash
 cd Prototip
 
-python3 run_tests.py              # full suite (~323 tests)
+python3 run_tests.py              # full suite (~327 tests)
 python3 run_tests.py -v           # verbose
 python3 run_tests.py test_parser  # one module
 
@@ -140,6 +140,8 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
   range checks; `zero_value` backs valueless declarations (`x : i32;`).
 - `return`/`break`/`continue` are Python exceptions (`ReturnSignal`, …); loop
   signals cannot cross a function boundary.
+- `RadianError.frames` accumulates (function, call line) as the error unwinds
+  through `call()`; `traceback_text()` renders it and the CLI prints it.
 - Conditions and `&&`/`||`/`!` require real `bool`s — no truthiness.
 - Integer `/` truncates toward zero and `%` follows the dividend's sign (C-style).
 - Builtins live in `_BUILTIN_SPECS`; methods in `ARRAY_METHODS` / `MAP_METHODS` /

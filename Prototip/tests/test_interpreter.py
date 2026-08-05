@@ -677,6 +677,38 @@ class TestRobustness(unittest.TestCase):
         self.assertEqual(run(src), 0)
 
 
+class TestTracebacks(unittest.TestCase):
+
+    SRC = ("bol (a:i32, b:i32) -> i32 { a / b; }\n"
+           "orta (x:i32) -> i32 { bol(10, x); }\n"
+           "dis () -> i32 { orta(0); }\n"
+           "dis();")
+
+    def _error(self, src: str) -> RadianError:
+        with self.assertRaises(RadianError) as ctx:
+            run(src)
+        return ctx.exception
+
+    def test_cagri_yigini_ictan_disa_dolar(self):
+        err = self._error(self.SRC)
+        self.assertEqual([name for name, _ in err.frames], ["bol", "orta", "dis"])
+
+    def test_cerceveler_cagri_satirini_tasir(self):
+        err = self._error(self.SRC)
+        self.assertEqual(err.frames[0][1], 2)          # bol çağrısı 2. satırda
+        self.assertEqual(err.frames[1][1], 3)          # orta çağrısı 3. satırda
+
+    def test_metin_gosterimi(self):
+        text = self._error(self.SRC).traceback_text()
+        self.assertIn("çağrı yığını", text)
+        self.assertIn("bol (satır 2)", text)
+
+    def test_fonksiyon_disinda_yigin_bostur(self):
+        err = self._error("1 / 0;")
+        self.assertEqual(err.frames, [])
+        self.assertEqual(err.traceback_text(), "")
+
+
 class TestErrorPositions(unittest.TestCase):
 
     def test_hata_satir_sutun_tasir(self):

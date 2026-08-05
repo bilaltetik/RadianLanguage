@@ -27,13 +27,26 @@ from parser import Node, NodeType, ParseError, parse_source
 # ---------------------------------------------------------------------------
 
 class RadianError(Exception):
-    """Çalışma zamanı hatası — kaynak konumuyla birlikte."""
+    """Çalışma zamanı hatası — kaynak konumu ve çağrı yığınıyla birlikte."""
 
     def __init__(self, msg: str, node: "Node | None" = None):
         self.line, self.column = _node_position(node)
         loc = f" [{self.line}:{self.column}]" if self.line else ""
         super().__init__(f"{msg}{loc}")
         self.msg = msg
+        # Hata yayılırken en içteki çağrıdan dışa doğru doldurulur:
+        # [(fonksiyon adı, çağrı satırı), …]
+        self.frames: list[tuple[str, int]] = []
+
+    def traceback_text(self) -> str:
+        """Çağrı yığınını okunabilir metne çevirir (boşsa boş dize)."""
+        if not self.frames:
+            return ""
+        lines = ["  çağrı yığını (içten dışa):"]
+        for name, line in self.frames:
+            where = f" (satır {line})" if line else ""
+            lines.append(f"    {name}{where}")
+        return "\n".join(lines)
 
 
 def _node_position(node: "Node | None") -> tuple[int, int]:
@@ -1103,6 +1116,11 @@ class Interpreter:
                 result = self._eval_block_in(callee.body, scope)
             except ReturnSignal as signal:
                 result = signal.value
+            except RadianError as err:
+                # Yığın çerçevesini ekleyip aynı hatayı yükselt
+                err.frames.append((callee.name, node.value.line
+                                   if node is not None and node.value else 0))
+                raise
             except (BreakSignal, ContinueSignal):
                 # Döngü sinyali fonksiyon sınırını aşamaz.
                 raise RadianError(
