@@ -25,6 +25,10 @@ class NodeType(Enum):
     # --- 0.2 yaması: çağrı ---
     CALL       = auto()  # children[0] = çağrılan, children[1:] = argümanlar
 
+    # --- 0.4 yaması: artırma/azaltma ---
+    PRE_OP     = auto()  # value = "++"/"--", children = [hedef]  →  ++x
+    POST_OP    = auto()  # value = "++"/"--", children = [hedef]  →  x++
+
     # --- 0.3 yaması: postfix erişim, dizi, akış denetimi ---
     MEMBER     = auto()  # value = üye adı, children = [nesne]        →  a.b
     INDEX      = auto()  # children = [nesne, indeks]                 →  a[i]
@@ -66,6 +70,12 @@ ASSIGN_OPS = {"=", "+=", "-=", "*=", "/=", "%=", "**=", "<<=", ">>=", "&=", "|="
 
 # Önek (unary) operatörleri
 UNARY_OPS = {"-", "+", "!", "~"}
+
+# Artırma / azaltma — hem önek hem sonek; binary operatör değildirler.
+INCDEC_OPS = {"++", "--"}
+
+# ++ / -- yalnızca bu düğümlere uygulanabilir (lvalue)
+LVALUE_TYPES = {NodeType.IDENTIFIER, NodeType.INDEX}
 
 # Binary operatör öncelik katmanları — index 0 en düşük öncelik.
 # symbols.txt'e eklenen ama burada yer almayan semboller "özel operatör"
@@ -430,12 +440,22 @@ class Parser:
         return left
 
     # ------------------------------------------------------------------
-    # Unary = [ UnaryOp ] Postfix
+    # Unary = ( "++" | "--" ) Unary          — önek artırma/azaltma
+    #       | [ UnaryOp ] Unary
+    #       | Term
     #
     # UnaryOp ∈ UNARY_OPS ve ardından bir Term başlamalı.
     # ------------------------------------------------------------------
 
     def _parse_unary(self) -> Node:
+        if self.match(*INCDEC_OPS):
+            op_tok = self.advance()
+            target = self._parse_unary()
+            self._require_lvalue(target, op_tok)
+            node = Node(NodeType.PRE_OP, op_tok)
+            node.add(target)
+            return node
+
         if self._is_unary_operator():
             op_tok  = self.advance()
             op_node = Node(NodeType.OPERATOR, op_tok)
@@ -465,9 +485,22 @@ class Parser:
                 node = self._parse_member(node)
             elif self.match("["):
                 node = self._parse_index(node)
+            elif self.match(*INCDEC_OPS):
+                op_tok = self.advance()
+                self._require_lvalue(node, op_tok)
+                post = Node(NodeType.POST_OP, op_tok)
+                post.add(node)
+                return post                          # zincir burada biter
             else:
                 break
         return node
+
+    def _require_lvalue(self, node: Node, op_tok: Token) -> None:
+        """'++' / '--' hedefi değişken ya da dizi elemanı olmalıdır."""
+        if node.type not in LVALUE_TYPES:
+            raise ParseError(
+                f"'{op_tok.value}' yalnızca değişken ya da dizi elemanına "
+                f"uygulanabilir", op_tok)
 
     # ------------------------------------------------------------------
     # Primary = "(" Expression ")"
@@ -750,6 +783,7 @@ class Parser:
         return (tok.type == TokenType.LITERAL_SYMB
                 and tok.value not in TERMINATORS
                 and tok.value not in ASSIGN_OPS
+                and tok.value not in INCDEC_OPS
                 and tok.value != ":")
 
     def _operator_level(self) -> int | None:

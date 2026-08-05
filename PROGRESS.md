@@ -59,8 +59,8 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] Uçtan uca (`examples/*.rad`) testleri.
 
 ### Faz 6 — Sonraki adaylar (henüz başlanmadı)
-- [ ] `++` / `--` sembolleri `symbols.txt`'de tanımlı ama dilde karşılığı yok
-      (`--5` sözdizimi hatası verir). Ya gerçeklenmeli ya da kaldırılmalı.
+- [x] `++` / `--` gerçeklendi (önek `PRE_OP`, sonek `POST_OP`; hedef lvalue
+      olmalı, parse zamanında doğrulanır).
 - [ ] Statik tip denetleyicisi (çalışma zamanı yerine parse sonrası).
 - [ ] Sözlük/map tipi, `struct`/kayıt tipleri.
 - [ ] Modül / `import` sistemi.
@@ -93,6 +93,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 15 | Negatif indeks hatadır (Python'daki sondan sayma yok). | Sınır dışı erişimi sessizce başka bir elemana çevirmemek için. |
 | 16 | `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır; 0..255 arası dönüş değeri süreç çıkış kodudur. | `main () -> i32 { … }` örneğinin dokümanlardaki anlamını gerçeklemek için. |
 | 17 | İfade konumundaki primitive tip adı (`bool`, `char`) aynı adlı bir değer tanımlıysa o değere çözülür. | `bool(x)` dönüşüm fonksiyonu ile `x : bool` tip adı çakışmasın diye. |
+| 19 | `++` / `--` kaldırılmak yerine gerçeklendi: hedef yalnızca IDENTIFIER ya da INDEX olabilir, ihlal **parse zamanında** hata verir. | `symbols.txt` bunları zaten tanımlıyordu; kaldırmak ilan edilen token kümesini daraltırdı. Lvalue denetimini parse zamanında yapmak `--5` gibi girdilere net mesaj verir. |
 | 18 | Belgelerdeki çalıştırılabilir örnekler ` ```radian ` ile etiketlenir ve `tests/test_docs.py` tarafından koşulur. | Doküman/kod ayrışması (bu depoda bir kez yaşandı) testle yakalanır. |
 | 8 | Dizi indeksleme `a[i]` postfix zincirinde; `[` tek karakterli sembol olarak zaten lexleniyor. | Çağrı/üye erişimiyle aynı katman → `a.b[0](x)` doğal çalışır. |
 
@@ -113,3 +114,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - Parser: fonksiyon çağrısı + postfix zinciri (`a.b[0](x)`), 11 katmanlı
   operatör önceliği, `if`/`else if`/`while`/`for`/`return`/`break`/`continue`,
   dizi literali ve dizi tipi, bileşik atamalar, iç fonksiyon tanımı (114 test yeşil).
+- `Grammer.md`, `Radian.ebnf`, `PARSER_UPDATE_GUIDE.md`, `README.md` ve
+  `CLAUDE.md` kodla senkronlandı; belge örnekleri `tests/test_docs.py` ile
+  çalıştırılır hale getirildi.
+- `++` / `--` gerçeklendi (244 test yeşil).

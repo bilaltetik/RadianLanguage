@@ -159,6 +159,44 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(run("(x = 4) + 1;"), 5)
 
 
+class TestIncDec(unittest.TestCase):
+
+    def test_onek_yeni_degeri_dondurur(self):
+        self.assertEqual(run("x = 1; ++x;"), 2)
+
+    def test_sonek_eski_degeri_dondurur(self):
+        self.assertEqual(run("x = 1; x++;"), 1)
+
+    def test_sonek_degiskeni_gunceller(self):
+        self.assertEqual(run("x = 1; x++; x;"), 2)
+
+    def test_azaltma(self):
+        self.assertEqual(run("x = 5; --x;"), 4)
+        self.assertEqual(run("x = 5; x--; x;"), 4)
+
+    def test_dizi_elemani(self):
+        self.assertEqual(run("xs = [1, 2]; xs[0]++; xs;"), [2, 2])
+
+    def test_ondalik_deger(self):
+        self.assertEqual(run("x = 1.5; ++x;"), 2.5)
+
+    def test_dongude_sayac(self):
+        self.assertEqual(run("i = 0; while i < 3 { i++; } i;"), 3)
+
+    def test_ifade_icinde_sirasi(self):
+        self.assertEqual(run("x = 1; a = x++; [a, x];"), [1, 2])
+
+    def test_tip_araligi_denetlenir(self):
+        with self.assertRaises(RadianError) as ctx:
+            run("x : i8 = 127; x++;")
+        self.assertIn("aralığının dışında", str(ctx.exception))
+
+    def test_sayisal_olmayan_hedef(self):
+        with self.assertRaises(RadianError) as ctx:
+            run('s = "a"; s++;')
+        self.assertIn("sayı bekler", str(ctx.exception))
+
+
 class TestTypes(unittest.TestCase):
 
     def test_tip_bagli_atama(self):

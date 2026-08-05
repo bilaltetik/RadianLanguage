@@ -218,6 +218,41 @@ class TestAssignOps(unittest.TestCase):
             "(ASSIGN:= (INDEX:[ IDENTIFIER:xs LITERAL:0) LITERAL:9)")
 
 
+class TestIncDec(unittest.TestCase):
+
+    def test_onek_artirma(self):
+        self.assertEqual(sexp(parse_expr("++x;")), "(PRE_OP:++ IDENTIFIER:x)")
+
+    def test_sonek_artirma(self):
+        self.assertEqual(sexp(parse_expr("x++;")), "(POST_OP:++ IDENTIFIER:x)")
+
+    def test_onek_azaltma(self):
+        self.assertEqual(sexp(parse_expr("--x;")), "(PRE_OP:-- IDENTIFIER:x)")
+
+    def test_dizi_elemani_hedef_olabilir(self):
+        self.assertEqual(sexp(parse_expr("xs[0]++;")),
+                         "(POST_OP:++ (INDEX:[ IDENTIFIER:xs LITERAL:0))")
+
+    def test_ifade_icinde(self):
+        self.assertEqual(
+            sexp(parse_expr("y = x++ + 1;")),
+            "(ASSIGN:= IDENTIFIER:y (BINARY_OP (POST_OP:++ IDENTIFIER:x) "
+            "OPERATOR:+ LITERAL:1))")
+
+    def test_literal_hedef_olamaz(self):
+        with self.assertRaises(ParseError) as ctx:
+            parse("--5;")
+        self.assertIn("yalnızca değişken", str(ctx.exception))
+
+    def test_cagri_sonucu_hedef_olamaz(self):
+        with self.assertRaises(ParseError):
+            parse("f()++;")
+
+    def test_binary_operator_degildir(self):
+        with self.assertRaises(ParseError):
+            parse("a ++ b;")
+
+
 class TestCalls(unittest.TestCase):
 
     def test_tek_argumanli_cagri(self):

@@ -24,6 +24,7 @@
    - 3.5 [Tip Dili](#35-tip-dili)
    - 3.6 [Fonksiyon Çağrısı ve Postfix Zinciri](#36-fonksiyon-çağrısı-ve-postfix-zinciri)
    - 3.7 [Akış Denetimi](#37-akış-denetimi)
+   - 3.7.1 [Artırma / Azaltma](#371-artırma--azaltma--ve---)
    - 3.8 [Diziler ve String'ler](#38-diziler-ve-stringler)
 4. [Örnekler](#4-örnekler)
 5. [Çalışma Zamanı Semantiği](#5-çalışma-zamanı-semantiği)
@@ -69,8 +70,8 @@ AssignOp      = "=" | "+=" | "-=" | "*=" | "/=" | "%="
               | "**=" | "<<=" | ">>=" | "&=" | "|=" | "^="
 TypeBind      = Binary   [ ":" TypeExpr ]        (* sağ-çağrışımlı, lvalue *)
 Binary        = BinaryLevel0                     (* 11 katman — bkz. §2 *)
-Unary         = [ UnaryOp ] Unary | Term
-Term          = Primary { CallSuffix | MemberSuffix | IndexSuffix }
+Unary         = ( "++" | "--" ) Unary | [ UnaryOp ] Unary | Term
+Term          = Primary { CallSuffix | MemberSuffix | IndexSuffix } [ "++" | "--" ]
 
 CallSuffix    = "(" [ ArgumentList ] ")"
 MemberSuffix  = "." T_IDENTIFIER
@@ -108,6 +109,7 @@ TypeParam     = T_IDENTIFIER ":" TypeExpr        (* isimli *)
 
 Operator      = T_SYMBOL                         (* birleştirme YOK *)
 UnaryOp       = "-" | "+" | "!" | "~"
+IncDecOp      = "++" | "--"                      (* yalnızca lvalue üzerinde *)
 
 (* ──────────── LİTERAL ──────────── *)
 
@@ -137,6 +139,7 @@ parser'a token ulaşmaz. Blok yorumları iç içe geçmez.
 | 2 | `TypeBind` | `:` | **Sağ** | Sağı TypeExpr |
 | 3 | `Binary` | 11 katman (aşağıda) | **Sol** | `**` sağ-çağrışımlı |
 | 4 | `Unary` | `-` `+` `!` `~` | — | Yalnızca önek |
+| 4 | `IncDec` | `++` `--` | — | Önek ve sonek; hedef lvalue olmalı |
 | 5 | `Term` | `f(x)` `a.b` `a[i]` | **Sol** | Postfix zinciri |
 | 6 (en yüksek) | `Primary` | `()` `{}` `[]` literal | — | Gruplama |
 | — (bağımsız) | `TypeExpr` | `->` | **Sağ** | Yalnızca `:` sağında |
@@ -407,6 +410,32 @@ assert(etiket == "büyük");
 
 ---
 
+### 3.7.1 Artırma / Azaltma — `++` ve `--`
+
+Hedef **lvalue** olmalıdır (değişken ya da dizi elemanı); literal ya da çağrı
+sonucu üzerinde kullanmak sözdizimi hatasıdır. Önek biçimi yeni, sonek biçimi
+eski değeri döndürür. Binary operatör değildirler: `a ++ b` geçersizdir.
+
+```radian
+x = 1;
+assert(++x == 2);          // önce artır, yeni değeri döndür
+assert(x++ == 2);          // eski değeri döndür
+assert(x == 3);
+
+xs = [1, 2];
+xs[0]++;
+assert(xs == [2, 2]);
+
+i = 0;
+while i < 3 { i++; }
+assert(i == 3);
+```
+
+> `xs[f()]++` biçiminde indeks ifadesi iki kez değerlendirilir (okuma ve yazma
+> için); yan etkili indeks kullanmaktan kaçının.
+
+---
+
 ### 3.8 Diziler ve String'ler
 
 ```radian
@@ -584,6 +613,8 @@ aralığındaki tamsayı değer süreç çıkış kodudur.
 | `TYPEBIND` | `_parse_typebind` | `:` token'ı | `[lhs, TypeExpr]` |
 | `BINARY_OP` | `_parse_binary` | — | `[lhs, OPERATOR, rhs]` |
 | `UNARY_OP` | `_parse_unary` | — | `[OPERATOR, işlenen]` |
+| `PRE_OP` | `_parse_unary` | `++` / `--` token'ı | `[hedef]` |
+| `POST_OP` | `_parse_term` | `++` / `--` token'ı | `[hedef]` |
 | `OPERATOR` | `_parse_operator` | operatör token'ı | — |
 | `LITERAL` | `_parse_literal` | değer token'ı | — |
 | `IDENTIFIER` | `_parse_literal` | isim token'ı | — |
@@ -672,7 +703,6 @@ Güncel durum ve öncelikler için depo kökündeki `PROGRESS.md`.
 
 | # | Özellik | Öncelik | Not |
 |---|---------|---------|-----|
-| 1 | `++` / `--` | 🔴 Yüksek | `symbols.txt`'de tanımlı ama dilde karşılığı yok; `--5` sözdizimi hatası verir |
 | 2 | Statik tip denetleyicisi | 🟡 Orta | Şu an tüm denetim çalışma zamanında |
 | 3 | `struct` / kayıt tipleri | 🟡 Orta | `MEMBER` düğümü hazır, yalnızca yerleşik metotlara bağlı |
 | 4 | Sözlük / map tipi | 🟡 Orta | `INDEX` düğümü yeniden kullanılabilir |

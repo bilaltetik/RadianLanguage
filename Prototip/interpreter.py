@@ -686,6 +686,35 @@ class Interpreter:
 
         raise RadianError(f"Bilinmeyen operatör: '{op}'", node)
 
+    def _eval_pre_op(self, node: Node, env: Environment):
+        """++x / --x — önce güncelle, *yeni* değeri döndür."""
+        _, new = self._step(node, env)
+        return new
+
+    def _eval_post_op(self, node: Node, env: Environment):
+        """x++ / x-- — önce güncelle, *eski* değeri döndür."""
+        old, _ = self._step(node, env)
+        return old
+
+    def _step(self, node: Node, env: Environment):
+        """Hedefi 1 artırır/azaltır; (eski, yeni) döndürür.
+
+        Not: `xs[f()]++` biçiminde indeks ifadesi iki kez değerlendirilir
+        (bir kez okuma, bir kez yazma için) — yan etkili indeks kullanma.
+        """
+        target = node.children[0]
+        delta  = 1 if node.value.value == "++" else -1
+
+        old = self.eval(target, env)
+        if not _is_number(old):
+            raise RadianError(
+                f"'{node.value.value}' sayı bekler, {type_name(old)} bulundu",
+                node)
+
+        new = old + delta
+        self._store(target, new, env, node)
+        return old, new
+
     def _eval_unary(self, node: Node, env: Environment):
         op_node, operand_node = node.children
         op    = op_node.value.value
@@ -951,6 +980,8 @@ Interpreter._DISPATCH = {
     NodeType.TYPEBIND:   Interpreter._eval_typebind,
     NodeType.BINARY_OP:  Interpreter._eval_binary,
     NodeType.UNARY_OP:   Interpreter._eval_unary,
+    NodeType.PRE_OP:     Interpreter._eval_pre_op,
+    NodeType.POST_OP:    Interpreter._eval_post_op,
     NodeType.LITERAL:    Interpreter._eval_literal,
     NodeType.IDENTIFIER: Interpreter._eval_identifier,
     NodeType.ARRAY:      Interpreter._eval_array,
