@@ -25,14 +25,14 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 ## 1. Yol haritası
 
 ### Faz 1 — Altyapı
-- [~] `PROGRESS.md` oluştur, yol haritasını çıkar.
-- [ ] `assert` tabanlı test altyapısı (`Prototip/tests/`, stdlib `unittest`).
-- [ ] `run_tests.py` — tek komutla tüm testleri çalıştır.
+- [x] `PROGRESS.md` oluştur, yol haritasını çıkar.
+- [x] `assert` tabanlı test altyapısı (`Prototip/tests/`, stdlib `unittest`).
+- [x] `run_tests.py` — tek komutla tüm testleri çalıştır.
 
 ### Faz 2 — Bilinen bug'lar / yarım kalan özellikler
-- [ ] Lexer: `//` satır ve `/* */` blok yorumları.
-- [ ] Lexer: kapatılmamış string/char hatasının satır/sütun bilgisi token başlangıcını göstersin.
-- [ ] Lexer: eksik/hatalı sayısal önek (`0x`, `1e`) için net hata.
+- [x] Lexer: `//` satır ve `/* */` blok yorumları.
+- [x] Lexer: kapatılmamış string/char hatasının satır/sütun bilgisi token başlangıcını göstersin.
+- [x] Lexer: eksik/hatalı sayısal önek (`0x`, `1e`) için net hata.
 - [ ] Parser: `_parse_call` — `f(x, y)` → `CALL` düğümü (dokümandaki drift kapandı).
 - [ ] Parser: `_parse_literal` artık gelişigüzel sembolü literal kabul etmesin.
 
@@ -83,3 +83,6 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 
 ### Oturum 1 (2026-08-05)
 - Depo incelendi, mevcut durum çıkarıldı, `PROGRESS.md` oluşturuldu.
+- Test altyapısı kuruldu: `Prototip/tests/` + `run_tests.py` (56 test, tümü yeşil).
+- Lexer: `//` ve `/* */` yorumları, kapatılmamış sabit/yorum ve eksik sayısal
+  önek/üs için doğru konumlu net hatalar (67 test yeşil).

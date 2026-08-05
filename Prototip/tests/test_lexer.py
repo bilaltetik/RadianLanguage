@@ -68,6 +68,14 @@ class TestNumbers(unittest.TestCase):
     def test_gecersiz_onek(self):
         self.assertIn("önek", lex_error("12x3")["error"])
 
+    def test_rakamsiz_onek_hata(self):
+        self.assertIn("rakam", lex_error("0x")["error"])
+        self.assertIn("rakam", lex_error("0b + 1")["error"])
+
+    def test_rakamsiz_us_hata(self):
+        self.assertIn("rakam", lex_error("1e")["error"])
+        self.assertIn("rakam", lex_error("1e+ 2")["error"])
+
 
 class TestStringsAndChars(unittest.TestCase):
 
@@ -88,6 +96,10 @@ class TestStringsAndChars(unittest.TestCase):
 
     def test_kapatilmamis_char(self):
         self.assertIn("Kapatılmamış", lex_error("'a")["error"])
+
+    def test_kapatilmamis_string_konumu_baslangici_gosterir(self):
+        err = lex_error('x = "abc\ndef')
+        self.assertEqual((err["line"], err["column"]), (1, 5))
 
 
 class TestSymbols(unittest.TestCase):
@@ -111,6 +123,39 @@ class TestSymbols(unittest.TestCase):
         self.assertEqual(token_pairs("a ** b **= c"),
                          [(IDEN, "a"), (SYMB, "**"), (IDEN, "b"),
                           (SYMB, "**="), (IDEN, "c")])
+
+
+class TestComments(unittest.TestCase):
+
+    def test_satir_yorumu_atilir(self):
+        self.assertEqual(token_pairs("a // yorum\nb"),
+                         [(IDEN, "a"), (IDEN, "b")])
+
+    def test_satir_yorumu_dosya_sonunda(self):
+        self.assertEqual(token_pairs("a // yorum"), [(IDEN, "a")])
+
+    def test_satir_yorumu_tek_basina(self):
+        self.assertEqual(token_pairs("// yalnızca yorum"), [])
+
+    def test_blok_yorumu_atilir(self):
+        self.assertEqual(token_pairs("a /* yorum */ + b"),
+                         [(IDEN, "a"), (SYMB, "+"), (IDEN, "b")])
+
+    def test_cok_satirli_blok_yorumu(self):
+        toks = tokenize("a /* bir\niki */ b")
+        self.assertEqual([t.value for t in toks], ["a", "b"])
+        self.assertEqual(toks[1].line, 2)          # satır sayacı korunmalı
+
+    def test_yorum_isaretleri_string_icinde_yorum_degildir(self):
+        self.assertEqual(token_pairs('"// yorum değil"'),
+                         [(STR, '"// yorum değil"')])
+
+    def test_bolme_operatoru_bozulmaz(self):
+        self.assertEqual(token_pairs("a / b"),
+                         [(IDEN, "a"), (SYMB, "/"), (IDEN, "b")])
+
+    def test_kapatilmamis_blok_yorumu(self):
+        self.assertIn("blok yorumu", lex_error("a /* açık")["error"])
 
 
 class TestPositions(unittest.TestCase):
