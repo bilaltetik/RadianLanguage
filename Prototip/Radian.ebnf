@@ -34,6 +34,7 @@ TopLevel        = Statement
 (* ------------------------------------------------------------------ *)
 
 Statement       = FuncDef
+                | StructDef
                 | "return" [ Expression ] ";"
                 | "break" ";"
                 | "continue" ";"
@@ -76,6 +77,26 @@ FuncDef         = T_IDENTIFIER [ FuncSignature ] Block
 *)
 
 FuncSignature   = "(" [ TypeParamList ] ")" "->" TypeExpr
+
+
+(* ------------------------------------------------------------------ *)
+(*  KAYIT TİPİ (STRUCT)                                                *)
+(* ------------------------------------------------------------------ *)
+
+StructDef       = "struct" T_IDENTIFIER "(" [ TypeParamList ] ")" ";"
+
+(*
+  Alan listesi fonksiyon imzasıyla aynı dilbilgisini kullanır; alan adı
+  zorunludur ve yinelenemez. Yapı adı hem bir tip hem de kurucu fonksiyondur:
+
+    struct Nokta (x:i32, y:i32);
+    p = Nokta(3, 4);        (* kurucu — alan sayısı ve tipleri denetlenir *)
+    p.x;                    (* alan okuma *)
+    p.y = 9;                (* alan yazma — tipi denetlenir *)
+    q : Nokta = p;          (* yapı adı tip konumunda da geçerli *)
+
+  Yapılar referans değerdir; eşitlik aynı yapı tipi + alan alan karşılaştırma.
+*)
 
 
 (* ------------------------------------------------------------------ *)
@@ -315,7 +336,7 @@ PrimitiveType   = "i8"  | "i16" | "i32" | "i64"
 (* ------------------------------------------------------------------ *)
 
 (*
-  if  else  while  for  in  return  break  continue  true  false
+  if  else  while  for  in  return  break  continue  true  false  struct
 
   Lexer bunları T_IDENTIFIER olarak üretir; ayrımı parser yapar.
   Değişken adı olarak kullanılamazlar ("true"/"false" birer literaldir).

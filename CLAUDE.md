@@ -40,7 +40,7 @@ Scripts are meant to be run with `Prototip/` as the working directory
 ```bash
 cd Prototip
 
-python3 run_tests.py              # full suite (~283 tests)
+python3 run_tests.py              # full suite (~306 tests)
 python3 run_tests.py -v           # verbose
 python3 run_tests.py test_parser  # one module
 
@@ -124,6 +124,10 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
 
 - Values are plain Python objects (`int`, `float`, `str`, `bool`, `list`, `dict`)
   plus `Function`, `Builtin`, `BoundMethod`, and the `UNIT` singleton.
+- `struct Ad (alan:Tip, …);` defines a `StructType`, which is callable as a
+  positional constructor and usable as a type name; instances are
+  `StructInstance`. `check_type` takes an optional `env` so a struct name in
+  type position can be resolved.
 - Maps use `#[k: v]` literals — `{` was unavailable (blocks) and `{a: T}`
   collides with TypeBind. Keys go through `map_key()`, which rejects `bool`.
 - `Environment` is a parent-linked scope holding both values and declared types.

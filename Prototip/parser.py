@@ -34,6 +34,9 @@ class NodeType(Enum):
     INDEX      = auto()  # children = [nesne, indeks]                 →  a[i]
     ARRAY      = auto()  # children = elemanlar                       →  [1, 2]
     MAP        = auto()  # children = [anahtar, değer, …] ikişerli    →  #["a": 1]
+
+    # --- 0.5 yaması: kayıt tipleri ---
+    STRUCT_DEF = auto()  # value = yapı adı, children = [TYPE_PARAM …]
     IF         = auto()  # children = [koşul, then-Block, else?]
     WHILE      = auto()  # children = [koşul, gövde-Block]
     FOR        = auto()  # value = döngü değişkeni, children = [dizi, gövde]
@@ -59,7 +62,7 @@ TERMINATORS = {";", "(", ")", "{", "}", "[", "]", ","}
 KEYWORDS = {
     "if", "else", "while", "for", "in",
     "return", "break", "continue",
-    "true", "false",
+    "true", "false", "struct",
 }
 
 # Değer üreten anahtar sözcükler (LITERAL düğümü olurlar)
@@ -331,6 +334,9 @@ class Parser:
         if self._is_funcdef_ahead():
             return self._parse_funcdef()
 
+        if self.match_keyword("struct"):
+            return self._wrap_statement(self._parse_struct())
+
         if self.match_keyword("return"):
             return self._wrap_statement(self._parse_return())
 
@@ -355,6 +361,37 @@ class Parser:
             self.expect(";")
         node = Node(NodeType.STATEMENT)
         node.add(expr)
+        return node
+
+    # ------------------------------------------------------------------
+    # StructDef = "struct" IDENTIFIER "(" [ TypeParamList ] ")" ";"
+    #
+    # Alan listesi fonksiyon imzasıyla aynı dilbilgisini kullanır; alan adı
+    # zorunludur. Yapı adı hem tip hem de kurucu fonksiyondur:
+    #
+    #   struct Nokta (x:i32, y:i32);
+    #   p = Nokta(3, 4);
+    #   p.x;
+    # ------------------------------------------------------------------
+
+    def _parse_struct(self) -> Node:
+        self.advance()                                   # "struct"
+
+        name_tok = self.current()
+        if (name_tok is None
+                or name_tok.type != TokenType.LITERAL_IDEN
+                or name_tok.value in KEYWORDS):
+            raise ParseError("'struct' sonrası yapı adı beklendi", name_tok)
+        self.advance()
+
+        node = Node(NodeType.STRUCT_DEF, name_tok)
+        self.expect("(")
+        if not self.match(")"):
+            node.add(self._parse_type_param())
+            while self.match(","):
+                self.advance()
+                node.add(self._parse_type_param())
+        self.expect(")")
         return node
 
     # ------------------------------------------------------------------

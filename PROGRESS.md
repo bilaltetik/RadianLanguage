@@ -67,7 +67,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] Özyineleme derinliği 162 → 1000 (kendi sayacımız + net Radian hatası).
 - [ ] Statik tip denetleyicisi (çalışma zamanı yerine parse sonrası).
 - [x] Harita (map) tipi: `#[k: v]` literali, indeksleme/atama, 10 metot.
-- [ ] `struct` / kayıt tipleri.
+- [x] `struct` / kayıt tipleri (`struct Ad (alan:Tip);`, kurucu + alan erişimi).
 - [ ] Modül / `import` sistemi.
 
 ### Faz 5 — Kalite / dokümantasyon
@@ -98,6 +98,8 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 15 | Negatif indeks hatadır (Python'daki sondan sayma yok). | Sınır dışı erişimi sessizce başka bir elemana çevirmemek için. |
 | 16 | `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır; 0..255 arası dönüş değeri süreç çıkış kodudur. | `main () -> i32 { … }` örneğinin dokümanlardaki anlamını gerçeklemek için. |
 | 17 | İfade konumundaki primitive tip adı (`bool`, `char`) aynı adlı bir değer tanımlıysa o değere çözülür. | `bool(x)` dönüşüm fonksiyonu ile `x : bool` tip adı çakışmasın diye. |
+| 23 | `struct Ad (alanlar);` bildirimi fonksiyon imzasıyla aynı `TypeParamList` dilbilgisini kullanır; yapı adı aynı zamanda kurucudur. | Yeni sözdizimi yüzeyi en aza iner: mevcut `CALL` ve `MEMBER` düğümleri olduğu gibi kullanılır. |
+| 24 | Yapı eşitliği: aynı `StructType` nesnesi + alan alan karşılaştırma. Alanları aynı olan iki farklı yapı asla eşit değildir. | Yapı adı bir tip kimliğidir; yapısal değil nominal eşitlik. |
 | 21 | Harita literali `#[k: v]`; `{k: v}` kullanılmadı. | `{` blok başlatıyor ve `{a: T}` TypeBind ile çakışıyor — gramerde gerçek bir belirsizlik. Anahtar `Binary` seviyesinde okunur, böylece `:` TypeBind sanılmaz. |
 | 22 | Harita anahtarı `bool` olamaz. | Python sözlüğünde `true` ile `1` aynı anahtara düşerdi; Radian'da `1 == true` yanlış olduğu için bu tutarsız olurdu. |
 | 20 | Radian çağrı derinliği yorumlayıcıda sayılır (`MAX_CALL_DEPTH = 1000`), Python'un `RecursionError`'ına bırakılmaz. | Python limiti Radian çağrısı başına ~6 kare tükettiği için sınır 162'ye düşüyordu ve hata mesajı dilin dışındaydı. |
@@ -128,5 +130,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - `++` / `--` gerçeklendi (244 test yeşil).
 - Sağlamlık taraması: döngüsel dizi yazdırma çökmesi ve düşük özyineleme
   sınırı düzeltildi; düşmanca girdi tablosu teste dönüştürüldü (256 test yeşil).
+- Kayıt tipleri (`struct`) eklendi: kurucu, alan okuma/yazma, tip konumunda
+  kullanım, nominal eşitlik, `examples/yapilar.rad` (306 test yeşil).
 - Harita tipi eklendi: `#[k: v]` literali, `map()` yerleşiği, 10 metot,
   `for` ile anahtar gezinme, `examples/haritalar.rad` (283 test yeşil).

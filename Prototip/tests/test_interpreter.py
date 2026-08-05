@@ -503,6 +503,87 @@ class TestMaps(unittest.TestCase):
         self.assertEqual(run("type(#[]);"), "map")
 
 
+class TestStructs(unittest.TestCase):
+
+    NOKTA = "struct Nokta (x:i32, y:i32); "
+
+    def test_kurucu_ve_alan_okuma(self):
+        self.assertEqual(run(self.NOKTA + "p = Nokta(3, 4); p.x;"), 3)
+
+    def test_alan_atamasi(self):
+        self.assertEqual(run(self.NOKTA + "p = Nokta(3, 4); p.y = 9; p.y;"), 9)
+
+    def test_gosterim(self):
+        self.assertEqual(output(self.NOKTA + "print(Nokta(1, 2));"),
+                         "Nokta(x: 1, y: 2)\n")
+
+    def test_esitlik_alanlara_gore(self):
+        self.assertIs(run(self.NOKTA + "Nokta(1, 2) == Nokta(1, 2);"), True)
+        self.assertIs(run(self.NOKTA + "Nokta(1, 2) == Nokta(1, 3);"), False)
+
+    def test_farkli_yapilar_esit_degildir(self):
+        self.assertIs(run("struct A (v:i32); struct B (v:i32); A(1) == B(1);"),
+                      False)
+
+    def test_tip_olarak_kullanilabilir(self):
+        self.assertEqual(run(self.NOKTA + "p : Nokta = Nokta(1, 2); p.x;"), 1)
+        with self.assertRaises(RadianError):
+            run(self.NOKTA + "p : Nokta = 5;")
+
+    def test_fonksiyon_parametresi_denetlenir(self):
+        src = "struct P (x:i32); uzaklik (p:P) -> i32 { p.x; } "
+        self.assertEqual(run(src + "uzaklik(P(7));"), 7)
+        with self.assertRaises(RadianError):
+            run(src + "uzaklik(5);")
+
+    def test_alan_sayisi_denetimi(self):
+        with self.assertRaises(RadianError) as ctx:
+            run(self.NOKTA + "Nokta(1);")
+        self.assertIn("alan bekliyor", str(ctx.exception))
+
+    def test_alan_tipi_denetimi(self):
+        with self.assertRaises(RadianError):
+            run(self.NOKTA + 'Nokta("a", 2);')
+        with self.assertRaises(RadianError):
+            run(self.NOKTA + 'p = Nokta(1, 2); p.x = "a";')
+
+    def test_bilinmeyen_alan(self):
+        with self.assertRaises(RadianError) as ctx:
+            run(self.NOKTA + "Nokta(1, 2).z;")
+        self.assertIn("alanı yok", str(ctx.exception))
+        with self.assertRaises(RadianError):
+            run(self.NOKTA + "p = Nokta(1, 2); p.z = 3;")
+
+    def test_yinelenen_alan_adi(self):
+        with self.assertRaises(RadianError) as ctx:
+            run("struct Q (x:i32, x:i32);")
+        self.assertIn("yinelenen alan", str(ctx.exception))
+
+    def test_referans_degerdir(self):
+        self.assertEqual(run("struct N (x:i32); a = N(1); b = a; b.x = 9; a.x;"),
+                         9)
+
+    def test_ic_ice_veri_yapilari(self):
+        self.assertEqual(run("struct L (n:[i32]); L([1, 2]).n.len();"), 2)
+        self.assertEqual(run('struct S (m:map); S(#["a": 1]).m["a"];'), 1)
+
+    def test_type_yapi_adini_dondurur(self):
+        self.assertEqual(run("struct Kutu (ic:i32); type(Kutu(1));"), "Kutu")
+
+    def test_yapi_dizisi(self):
+        src = (self.NOKTA +
+               "ps = [Nokta(1, 2), Nokta(3, 4)]; t = 0; "
+               "for p in ps { t += p.x; } t;")
+        self.assertEqual(run(src), 4)
+
+    def test_dongusel_referans_yazdirilabilir(self):
+        src = ("struct Dugum (deger:i32, sonraki:Dugum); "
+               "d = Dugum(1, 0); ")
+        # sonraki alanı Dugum bekliyor → 0 vermek hata olmalı
+        with self.assertRaises(RadianError):
+            run(src)
+
+
 class TestBuiltins(unittest.TestCase):
 
     def test_print(self):

@@ -48,6 +48,7 @@ TopLevel      = Statement
 (* ──────────── STATEMENT ──────────── *)
 
 Statement     = FuncDef
+              | StructDef
               | "return" [ Expression ] ";"
               | "break" ";"
               | "continue" ";"
@@ -57,6 +58,7 @@ Statement     = FuncDef
 
 FuncDef       = T_IDENTIFIER [ FuncSignature ] Block
 FuncSignature = "(" [ TypeParamList ] ")" "->" TypeExpr
+StructDef     = "struct" T_IDENTIFIER "(" [ TypeParamList ] ")" ";"
 
 (* ──────────── BLOK ──────────── *)
 
@@ -125,7 +127,7 @@ PrimitiveType = "i8"  | "i16" | "i32" | "i64"
               | "f32" | "f64" | "bool" | "char"
 ```
 
-**Anahtar sözcükler:** `if else while for in return break continue true false`
+**Anahtar sözcükler:** `if else while for in return break continue true false struct`
 Lexer bunları `T_IDENTIFIER` olarak üretir; ayrımı parser yapar.
 
 **Yorumlar:** `// satır sonuna kadar` ve `/* blok */` — lexer'da atılır,
@@ -466,6 +468,41 @@ assert(harfler == "naidar");
 - String'ler indekslenebilir ve `for` ile gezilebilir; `s[0]` tek karakterlik
   bir string döndürür.
 
+### Kayıt tipleri (struct)
+
+`struct Ad (alan:Tip, …);` bir kayıt tipi tanımlar. Yapı adı hem tip hem
+kurucudur; alanlara `.` ile erişilir ve yazılır.
+
+```radian
+struct Nokta (x:i32, y:i32);
+struct Cember (merkez:Nokta, yaricap:f64);
+
+p = Nokta(3, 4);
+assert(p.x == 3);
+
+p.y = 9;                           // alan yazma — tipi denetlenir
+assert(p.y == 9);
+
+// Yapı adı tip konumunda da geçerli
+q : Nokta = p;
+uzaklik_kare (a:Nokta) -> i32 { a.x * a.x + a.y * a.y; }
+assert(uzaklik_kare(Nokta(3, 4)) == 25);
+
+// İç içe yapı ve eşitlik
+c = Cember(Nokta(0, 0), 5.0);
+assert(c.merkez == Nokta(0, 0));
+assert(Nokta(1, 2) == Nokta(1, 2));
+```
+
+- Kurucu **konumsaldır**; alan sayısı ve tipleri çağrıda denetlenir.
+- Bilinmeyen alanı okumak/yazmak hatadır; alan adları yinelenemez.
+- Yapılar **referans değerdir**; eşitlik aynı yapı tipi ve alan alan
+  karşılaştırma demektir (`struct A (v:i32)` ile `struct B (v:i32)` asla eşit
+  değildir).
+- Yazdırıldığında `Nokta(x: 3, y: 9)` biçiminde görünür.
+
+---
+
 ### Haritalar
 
 Harita literali `#[anahtar: değer]` biçimindedir. `{` blok başlattığı ve
@@ -569,6 +606,7 @@ main () -> i32 {
 | `char` `str` | Python `str` | `"char"` / `"str"` |
 | `[T]` | Python `list` | `"array"` |
 | `map` | Python `dict` | `"map"` |
+| kayıt | `StructInstance` | yapının adı (örn. `"Nokta"`) |
 | fonksiyon | `Function` / `Builtin` | `"func"` |
 | unit | `UNIT` | `"unit"` |
 
@@ -664,6 +702,7 @@ aralığındaki tamsayı değer süreç çıkış kodudur.
 | `INDEX` | `_parse_index` | `[` token'ı | `[nesne, indeks]` |
 | `ARRAY` | `_parse_array` / `_parse_tuple_type_expr` | `[` token'ı | `[eleman …]` ya da `[eleman tipi]` |
 | `MAP` | `_parse_map` | `#` token'ı | `[anahtar, değer, …]` (ikişerli) |
+| `STRUCT_DEF` | `_parse_struct` | yapı adı token'ı | `[TYPE_PARAM …]` (alanlar) |
 | `IF` | `_parse_if` | `if` token'ı | `[koşul, then, else?]` |
 | `WHILE` | `_parse_while` | `while` token'ı | `[koşul, gövde]` |
 | `FOR` | `_parse_for` | döngü değişkeni token'ı | `[dizi, gövde]` |
@@ -746,7 +785,6 @@ Güncel durum ve öncelikler için depo kökündeki `PROGRESS.md`.
 | # | Özellik | Öncelik | Not |
 |---|---------|---------|-----|
 | 2 | Statik tip denetleyicisi | 🟡 Orta | Şu an tüm denetim çalışma zamanında |
-| 3 | `struct` / kayıt tipleri | 🟡 Orta | `MEMBER` düğümü hazır, yalnızca yerleşik metotlara bağlı |
 | 5 | Opsiyonel tip `T?` | 🟢 Düşük | TypeExpr genişletmesi |
 | 6 | Generic tipler `T<A>` | ⚪ Uzak | TypeExpr büyük genişletme |
 | 7 | Import / modül sistemi | ⚪ Uzak | Şu an tek dosya |

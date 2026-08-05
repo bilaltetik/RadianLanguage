@@ -39,14 +39,28 @@ python3 run_tests.py                       # tüm testler
 
 | Alan | Destek |
 |------|--------|
-| Değerler | tamsayı (`0xFF`, `0b1010`, `1_000`), ondalık, `str`, `char`, `bool`, dizi, harita |
-| Tipler | `i8…i64`, `u8…u64`, `f32/f64`, `bool`, `char`, `str`, `[T]`, `map`, fonksiyon tipleri |
+| Değerler | tamsayı (`0xFF`, `0b1010`, `1_000`), ondalık, `str`, `char`, `bool`, dizi, harita, kayıt |
+| Tipler | `i8…i64`, `u8…u64`, `f32/f64`, `bool`, `char`, `str`, `[T]`, `map`, `struct`, fonksiyon tipleri |
 | Tip bağlama | `x : i32 = 42;` — çalışma zamanında doğrulanır (aralık denetimi dahil) |
 | Operatörler | 11 öncelik katmanı, `**` sağ-çağrışımlı, bileşik atamalar (`+=`, `<<=`, …), `++`/`--` |
 | Akış denetimi | `if`/`else if`/`else`, `while`, `for … in`, `break`, `continue`, `return` |
 | Fonksiyonlar | özyineleme, closure, yüksek mertebeden fonksiyonlar, currying |
 | Veri işleme | dizi/harita/string metotları: `map` `filter` `reduce` `sort` `split` `join` `keys` … |
 | Diğer | `//` ve `/* */` yorumları, blok = ifade (son statement'ın değeri) |
+
+Kendi veri tiplerini `struct` ile tanımlarsın; yapı adı hem tip hem kurucudur:
+
+```radian
+struct Nokta (x:f64, y:f64);
+
+uzaklik (a:Nokta, b:Nokta) -> f64 {
+    dx = a.x - b.x;
+    dy = a.y - b.y;
+    (dx * dx + dy * dy) ** 0.5;
+}
+
+assert(uzaklik(Nokta(0.0, 0.0), Nokta(3.0, 4.0)) == 5.0);
+```
 
 Her şey bir **ifadedir**: bloklar, `if`, `while` ve `for` değer döndürür.
 

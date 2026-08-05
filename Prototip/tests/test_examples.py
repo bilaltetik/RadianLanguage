@@ -25,6 +25,8 @@ EXAMPLES = [
     ("diziler.rad",   ["toplam  : 55", "sesli harf sayısı: 3",
                        'kelimeler: ["radian", "dili", "hızlıdır"]']),
     ("closure.rad",   ["a: 1 2 3", "b: 1", "kasa: 110 115"]),
+    ("yapilar.rad",   ["uzaklık : 5.0", "kapsıyor: true", "en genç        : ada",
+                       "Cember(merkez: Nokta(x: 0.0, y: 0.0), yaricap: 5.0)"]),
     ("haritalar.rad", ['Japonya    : Tokyo', "kaç ülke   : 3",
                        'sayım      : #["bir": 3, "iki": 2, "üç": 1]',
                        "varsayılan : bilinmiyor"]),

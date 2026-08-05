@@ -1,0 +1,60 @@
+// Kayıt tipleri (struct) — alanlı veri yapıları.
+//
+// Yapı adı hem bir tip hem de kurucu fonksiyondur:
+//   struct Nokta (x:i32, y:i32);   →  Nokta(3, 4)
+
+struct Nokta (x:f64, y:f64);
+struct Cember (merkez:Nokta, yaricap:f64);
+struct Kisi (ad:str, yas:u8, etiketler:[str]);
+
+uzaklik (a:Nokta, b:Nokta) -> f64 {
+    dx = a.x - b.x;
+    dy = a.y - b.y;
+    (dx * dx + dy * dy) ** 0.5;
+}
+
+kapsiyor_mu (c:Cember, p:Nokta) -> bool {
+    uzaklik(c.merkez, p) <= c.yaricap;
+}
+
+main () -> i32 {
+    // Kurma ve alan okuma
+    a = Nokta(0.0, 0.0);
+    b = Nokta(3.0, 4.0);
+    print("a =", a, " b =", b);
+    print("uzaklık :", uzaklik(a, b));
+
+    // İç içe yapı
+    c = Cember(a, 5.0);
+    print("çember  :", c);
+    print("kapsıyor:", kapsiyor_mu(c, b));
+
+    // Alan ataması — tipi denetlenir
+    b.x = 6.0;
+    print("b.x güncellendi:", b);
+
+    // Yapılar referans değerdir
+    takma = b;
+    takma.y = 99.0;
+    print("b de değişti   :", b);
+
+    // Eşitlik alan alan karşılaştırır
+    print("eşit mi        :", Nokta(1.0, 2.0) == Nokta(1.0, 2.0));
+
+    // Yapı dizileri ve diğer tiplerle birlikte kullanım
+    ekip = [
+        Kisi("ada", 36, ["matematik", "analitik motor"]),
+        Kisi("linus", 54, ["çekirdek"]),
+    ];
+    for k in ekip {
+        print(k.ad, "→", k.yas, k.etiketler.join(", "));
+    }
+
+    en_genc = ekip[0];
+    for k in ekip {
+        if k.yas < en_genc.yas { en_genc = k; }
+    }
+    print("en genç        :", en_genc.ad);
+
+    0;
+}

@@ -392,6 +392,38 @@ class TestMaps(unittest.TestCase):
         self.assertEqual(parse_expr("x = {};").children[1].type, NodeType.BLOCK)
 
 
+class TestStructs(unittest.TestCase):
+
+    def test_yapi_tanimi(self):
+        program = parse("struct Nokta (x:i32, y:i32);")
+        node = program.children[0].children[0]
+        self.assertEqual(node.type, NodeType.STRUCT_DEF)
+        self.assertEqual(node.value.value, "Nokta")
+        self.assertEqual(len(node.children), 2)
+
+    def test_alansiz_yapi(self):
+        node = parse_expr("struct Bos ();")
+        self.assertEqual(node.type, NodeType.STRUCT_DEF)
+        self.assertEqual(node.children, [])
+
+    def test_alan_tipleri_tip_dilinden(self):
+        node = parse_expr("struct K (xs:[i32], f:(a:i32) -> i32);")
+        self.assertEqual(node.children[0].children[0].type, NodeType.ARRAY)
+        self.assertEqual(node.children[1].children[0].type, NodeType.FUNC_TYPE)
+
+    def test_noktali_virgul_zorunlu(self):
+        with self.assertRaises(ParseError):
+            parse("struct Nokta (x:i32)")
+
+    def test_isim_zorunlu(self):
+        with self.assertRaises(ParseError):
+            parse("struct (x:i32);")
+
+    def test_struct_anahtar_sozcuktur(self):
+        with self.assertRaises(ParseError):
+            parse("struct = 1;")
+
+
 class TestControlFlow(unittest.TestCase):
 
     def test_if_else(self):

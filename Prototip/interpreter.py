@@ -131,7 +131,41 @@ class BoundMethod:
         return f"<metot {self.builtin.name}>"
 
 
-CALLABLE_TYPES = (Function, Builtin, BoundMethod)
+class StructType:
+    """Kullanıcı tanımlı kayıt tipi. Adı hem tip hem kurucu fonksiyondur."""
+
+    def __init__(self, name: str, fields: list[tuple[str, Node | None]]):
+        self.name   = name
+        self.fields = fields                 # [(alan adı, tip düğümü | None), …]
+
+    @property
+    def arity(self) -> int:
+        return len(self.fields)
+
+    def field_names(self) -> list[str]:
+        return [name for name, _ in self.fields]
+
+    def __repr__(self):
+        return f"<yapı {self.name}/{self.arity}>"
+
+
+class StructInstance:
+    """Bir StructType örneği — alanları sözlükte tutar (referans değer)."""
+
+    def __init__(self, struct_type: StructType, values: dict):
+        self.struct_type = struct_type
+        self.values      = values
+
+    @property
+    def name(self) -> str:
+        return self.struct_type.name
+
+    def __repr__(self):
+        inner = ", ".join(f"{k}: {v!r}" for k, v in self.values.items())
+        return f"{self.name}({inner})"
+
+
+CALLABLE_TYPES = (Function, Builtin, BoundMethod, StructType)
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +206,7 @@ class Environment:
         env = self.lookup_scope(name) or self
         declared = env.types.get(name)
         if declared is not None:
-            check_type(value, declared, name, node)
+            check_type(value, declared, name, node, env)
         env.values[name] = value
 
     def declared_type(self, name: str) -> Node | None:
@@ -212,6 +246,10 @@ def type_name(value) -> str:
         return "array"
     if isinstance(value, dict):
         return "map"
+    if isinstance(value, StructInstance):
+        return value.name
+    if isinstance(value, StructType):
+        return "struct"
     if isinstance(value, CALLABLE_TYPES):
         return "func"
     if value is UNIT:
@@ -238,14 +276,18 @@ def type_repr(type_node: Node | None) -> str:
 
 
 def check_type(value, type_node: Node | None, name: str = "",
-               node: Node | None = None) -> None:
-    """Değer bildirilen tiple uyumlu değilse RadianError fırlatır."""
+               node: Node | None = None, env: "Environment | None" = None) -> None:
+    """Değer bildirilen tiple uyumlu değilse RadianError fırlatır.
+
+    `env` verilirse bilinmeyen tip adları çevrede aranır; bir StructType'a
+    çözülüyorsa değerin o yapının örneği olması gerekir.
+    """
     if type_node is None:
         return
 
     if type_node.type == NodeType.TYPE_PARAM:
         if type_node.children:
-            check_type(value, type_node.children[0], name, node)
+            check_type(value, type_node.children[0], name, node, env)
         return
 
     where = f" ('{name}')" if name else ""
@@ -258,7 +300,7 @@ def check_type(value, type_node: Node | None, name: str = "",
                 f"{type_name(value)} bulundu", node)
         if type_node.children:
             for item in value:
-                check_type(item, type_node.children[0], name, node)
+                check_type(item, type_node.children[0], name, node, env)
         return
 
     # --- fonksiyon tipi ---
@@ -321,7 +363,18 @@ def check_type(value, type_node: Node | None, name: str = "",
                 f"{type_name(value)} bulundu", node)
         return
 
-    # Kullanıcı tanımlı / bilinmeyen tip adı → şimdilik serbest
+    # Kullanıcı tanımlı yapı adı → çevrede ara
+    if env is not None:
+        scope = env.lookup_scope(tname)
+        declared = scope.values.get(tname) if scope else None
+        if isinstance(declared, StructType):
+            if not isinstance(value, StructInstance) or value.struct_type is not declared:
+                raise RadianError(
+                    f"Tip uyuşmazlığı{where}: {tname} bekleniyordu, "
+                    f"{type_name(value)} bulundu", node)
+            return
+
+    # Bilinmeyen tip adı → şimdilik serbest
 
 
 def map_key(value, node: Node | None = None):
@@ -384,6 +437,14 @@ def to_display(value, _seen: set | None = None) -> str:
             return "[...]"                        # döngüsel referans
         seen = seen | {id(value)}
         return "[" + ", ".join(to_repr(v, seen) for v in value) + "]"
+    if isinstance(value, StructInstance):
+        seen = _seen or set()
+        if id(value) in seen:
+            return f"{value.name}(...)"
+        seen = seen | {id(value)}
+        inner = ", ".join(f"{k}: {to_repr(v, seen)}"
+                          for k, v in value.values.items())
+        return f"{value.name}({inner})"
     if isinstance(value, dict):
         seen = _seen or set()
         if id(value) in seen:
@@ -580,6 +641,27 @@ class Interpreter:
         env.define(name, func)
         return func
 
+    def _eval_struct_def(self, node: Node, env: Environment):
+        """struct Nokta (x:i32, y:i32);  →  çevrede Nokta adlı kurucu tanımlar."""
+        name   = node.value.value
+        fields = []
+        seen   = set()
+        for param in node.children:
+            if param.value is None:
+                raise RadianError(
+                    f"'{name}' yapısında alan adı zorunlu", param)
+            fname = param.value.value
+            if fname in seen:
+                raise RadianError(
+                    f"'{name}' yapısında yinelenen alan: '{fname}'", param)
+            seen.add(fname)
+            ftype = param.children[0] if param.children else None
+            fields.append((fname, ftype))
+
+        struct = StructType(name, fields)
+        env.define(name, struct)
+        return struct
+
     # ------------------------------------------------------------------
     # Atama ve tip bağlama
     # ------------------------------------------------------------------
@@ -610,7 +692,7 @@ class Interpreter:
             if inner.type != NodeType.IDENTIFIER:
                 raise RadianError("Tip yalnızca değişkene bağlanabilir", inner)
             name = inner.value.value
-            check_type(value, type_node, name, node)
+            check_type(value, type_node, name, node, env)
             scope = env.lookup_scope(name) or env
             scope.define(name, value, type_node)
             return value
@@ -630,6 +712,20 @@ class Interpreter:
             obj[index] = value
             return value
 
+        if target.type == NodeType.MEMBER:
+            obj   = self.eval(target.children[0], env)
+            fname = target.value.value
+            if not isinstance(obj, StructInstance):
+                raise RadianError(
+                    f"{type_name(obj)} değerine üye ataması yapılamaz", target)
+            if fname not in obj.values:
+                raise RadianError(
+                    f"'{obj.name}' yapısının '{fname}' alanı yok", target)
+            ftype = dict(obj.struct_type.fields).get(fname)
+            check_type(value, ftype, f"{obj.name}.{fname}", target, self.globals)
+            obj.values[fname] = value
+            return value
+
         raise RadianError("Geçersiz atama hedefi", target)
 
     def _eval_typebind(self, node: Node, env: Environment):
@@ -639,7 +735,7 @@ class Interpreter:
         if target.type != NodeType.IDENTIFIER:
             # (a + b) : i32 gibi kullanım → yalnızca doğrulama
             value = self.eval(target, env)
-            check_type(value, type_node, "", node)
+            check_type(value, type_node, "", node, env)
             return value
 
         name  = target.value.value
@@ -650,7 +746,7 @@ class Interpreter:
             return value
 
         value = scope.values[name]
-        check_type(value, type_node, name, node)
+        check_type(value, type_node, name, node, env)
         scope.types[name] = type_node
         return value
 
@@ -804,6 +900,14 @@ class Interpreter:
 
     @staticmethod
     def _equals(left, right) -> bool:
+        if isinstance(left, StructInstance) or isinstance(right, StructInstance):
+            if not (isinstance(left, StructInstance)
+                    and isinstance(right, StructInstance)):
+                return False
+            if left.struct_type is not right.struct_type:
+                return False
+            return all(Interpreter._equals(left.values[k], right.values[k])
+                       for k in left.values)
         if isinstance(left, bool) != isinstance(right, bool):
             return False
         if left is UNIT or right is UNIT:
@@ -892,6 +996,14 @@ class Interpreter:
         obj  = self.eval(node.children[0], env)
         name = node.value.value
 
+        if isinstance(obj, StructInstance):
+            if name not in obj.values:
+                raise RadianError(
+                    f"'{obj.name}' yapısının '{name}' alanı yok "
+                    f"(alanlar: {', '.join(obj.struct_type.field_names())})",
+                    node)
+            return obj.values[name]
+
         table = _method_table(obj)
         if name not in table:
             raise RadianError(
@@ -917,6 +1029,18 @@ class Interpreter:
             self._check_arity(callee, len(args), node)
             return callee.fn(self, args, node)
 
+        if isinstance(callee, StructType):
+            if len(args) != callee.arity:
+                raise RadianError(
+                    f"'{callee.name}' {callee.arity} alan bekliyor, "
+                    f"{len(args)} verildi", node)
+            values = {}
+            for (fname, ftype), value in zip(callee.fields, args):
+                check_type(value, ftype, f"{callee.name}.{fname}", node,
+                           self.globals)
+                values[fname] = value
+            return StructInstance(callee, values)
+
         if isinstance(callee, Function):
             if len(args) != callee.arity:
                 raise RadianError(
@@ -930,7 +1054,7 @@ class Interpreter:
 
             scope = Environment(callee.closure)
             for (pname, ptype), value in zip(callee.params, args):
-                check_type(value, ptype, pname, node)
+                check_type(value, ptype, pname, node, callee.closure)
                 scope.define(pname, value, ptype)
 
             self.depth += 1
@@ -948,7 +1072,7 @@ class Interpreter:
 
             if callee.return_type is not None:
                 check_type(result, callee.return_type,
-                           f"{callee.name} dönüş değeri", node)
+                           f"{callee.name} dönüş değeri", node, callee.closure)
             return result
 
         raise RadianError(f"{type_name(callee)} çağrılabilir değil", node)
@@ -1072,6 +1196,7 @@ Interpreter._DISPATCH = {
     NodeType.IDENTIFIER: Interpreter._eval_identifier,
     NodeType.ARRAY:      Interpreter._eval_array,
     NodeType.MAP:        Interpreter._eval_map,
+    NodeType.STRUCT_DEF: Interpreter._eval_struct_def,
     NodeType.INDEX:      Interpreter._eval_index,
     NodeType.MEMBER:     Interpreter._eval_member,
     NodeType.CALL:       Interpreter._eval_call,
