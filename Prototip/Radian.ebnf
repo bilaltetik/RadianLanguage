@@ -1,6 +1,6 @@
 (* ================================================================== *)
-(*  MyLang — Canonical BNF Grameri                                    *)
-(*  Versiyon: 0.3                                                      *)
+(*  Radian — Canonical BNF Grameri                                    *)
+(*  Versiyon: 0.4                                                      *)
 (*                                                                    *)
 (*  Gösterim:                                                         *)
 (*    { x }   → x sıfır veya daha fazla kez                          *)
@@ -9,6 +9,9 @@
 (*    x | y   → x ya da y                                            *)
 (*    "..."   → terminal sembol (token değeri)                        *)
 (*    T_*     → lexer token tipi                                      *)
+(*                                                                    *)
+(*  Bu dosya parser.py ile bire bir tutulur. Kod ile ayrıştığında     *)
+(*  doğru kabul edilen parser.py'dir; bu dosya güncellenmelidir.      *)
 (* ================================================================== *)
 
 
@@ -18,14 +21,30 @@
 
 Program         = { TopLevel }
 
-TopLevel        = FuncDef
-                | Statement
+TopLevel        = Statement
 
 (*
-  Ayrım kuralı (parser lookahead):
-    IDENTIFIER + "{"  →  FuncDef (gövde, imzasız)
-    IDENTIFIER + "("  →  FuncDef (satır içi imzalı)
-    diğer             →  Statement
+  FuncDef ayrımı Statement içinde yapılır (_is_funcdef_ahead), böylece
+  fonksiyon tanımı blok içinde de geçerlidir (iç fonksiyon / closure).
+*)
+
+
+(* ------------------------------------------------------------------ *)
+(*  STATEMENT                                                          *)
+(* ------------------------------------------------------------------ *)
+
+Statement       = FuncDef
+                | "return" [ Expression ] ";"
+                | "break" ";"
+                | "continue" ";"
+                | Expression [ ";" ]
+
+(*
+  ";" yalnızca gövdesi blokla biten ifadelerde (if / while / for / blok)
+  opsiyoneldir; diğer tüm ifadelerde zorunludur.
+
+    if x { 1; }        (* ";" gerekmez *)
+    r = if x { 1; };   (* ifade atamanın parçası → ";" gerekli *)
 *)
 
 
@@ -38,7 +57,7 @@ FuncDef         = T_IDENTIFIER [ FuncSignature ] Block
 (*
   Geçerli formlar:
 
-    1) Sadece gövde (imza ayrıca bildirilmiş):
+    1) Sadece gövde (parametresiz; imza ayrıca bildirilmiş olabilir):
          topla { result = x + y; result; }
 
     2) Satır içi imza + gövde (tam tanım):
@@ -49,6 +68,11 @@ FuncDef         = T_IDENTIFIER [ FuncSignature ] Block
 
     3) Sadece imza bildirimi — Statement olarak:
          topla : (x:i32, y:i32) -> i32;
+
+  FuncDef / çağrı ayrımı (parser lookahead):
+    IDENTIFIER + "{"                        → FuncDef (form 1)
+    IDENTIFIER + "(" … ")" + "->"           → FuncDef (form 2)
+    diğer (örn. IDENTIFIER + "(" … ")" )    → çağrı ifadesi
 *)
 
 FuncSignature   = "(" [ TypeParamList ] ")" "->" TypeExpr
@@ -62,18 +86,12 @@ Block           = "{" { Statement } "}"
 
 (*
   - Son Statement'ın değeri blokun değeridir (implicit return).
-  - Tüm Statement'lar ";" ile biter; son Statement da dahil.
-  - Boş blok "{}" → unit döndürür (semantik katmanda tanımlanacak).
-  - Blok hem fonksiyon gövdesi hem değer (Term) olarak kullanılabilir:
+  - Boş blok "{}" → unit.
+  - Her blok yeni bir kapsam açar; "=" değişkeni kapsam zincirinde arar,
+    bulamazsa geçerli kapsamda tanımlar.
+  - Blok hem fonksiyon gövdesi hem değer (Primary) olarak kullanılabilir:
       r = { a = 1; a + 2; };   (* r = 3 *)
 *)
-
-
-(* ------------------------------------------------------------------ *)
-(*  STATEMENT                                                          *)
-(* ------------------------------------------------------------------ *)
-
-Statement       = Expression ";"
 
 
 (* ------------------------------------------------------------------ *)
@@ -85,68 +103,114 @@ Expression      = Assign
 (*
   Assign — sağ-çağrışımlı, lvalue döndürür
   ──────────────────────────────────────────
-  "=" operatörü atama yapar ve sol tarafı (lvalue) döndürür.
-
     a = b         → b'yi a'ya ata, a'yı döndür
     a = b = c     → ASSIGN( a, ASSIGN(b, c) )      sağ-çağrışımlı
     (a = b) + 2   → a'ya b atanır, sonuç a+2        parantez ile lvalue kullanımı
+    a += 1        → ASSIGN:"+=" (a, 1) ≡ a = a + 1
 *)
-Assign          = TypeBind [ "=" Assign ]
+Assign          = TypeBind [ AssignOp Assign ]
+
+AssignOp        = "=" | "+=" | "-=" | "*=" | "/=" | "%="
+                | "**=" | "<<=" | ">>=" | "&=" | "|=" | "^="
 
 (*
   TypeBind — sağ-çağrışımlı, lvalue döndürür
   ────────────────────────────────────────────
-  ":" operatörü tip bağlar ve sol tarafı (lvalue) döndürür.
+  ":" tip bağlar ve sol tarafı (lvalue) döndürür.
   Sağ taraf her zaman TypeExpr'dir; Expression değil.
 
-    b : i32            → b'yi i32'ye dönüştür, b'yi döndür
+    b : i32            → b'yi i32'ye bağla, b'yi döndür
     a : i32 = b        → ASSIGN( TYPEBIND(a, i32), b )
     a = b : i32        → ASSIGN( a, TYPEBIND(b, i32) )
-    a : i32 = b : f64  → ASSIGN( TYPEBIND(a,i32), TYPEBIND(b,f64) )
 *)
 TypeBind        = Binary [ ":" TypeExpr ]
 
 (*
-  Binary — sol-çağrışımlı
-  ─────────────────────────
-  "=" ve ":" bu seviyeye geçemez; üst katmanlarda yakalanır.
-  Tüm kullanıcı tanımlı operatörler bu seviyededir.
+  Binary — öncelik katmanlı (parser.py: BINARY_LEVELS)
+  ─────────────────────────────────────────────────────
+  Binary(n)   = Binary(n+1) { Op(n) Binary(n+1) }     sol-çağrışımlı
+  Binary(son) = Unary
 
-    a + b + c  →  BINARY( BINARY(a,+,b), +, c )
+  Katmanlar (düşük → yüksek):
+
+    0   ||                       (özel/tabloda olmayan semboller de burada)
+    1   &&
+    2   |
+    3   ^
+    4   &
+    5   ==  !=
+    6   <   >   <=  >=
+    7   <<  >>
+    8   +   -
+    9   *   /   %
+    10  **                        (sağ-çağrışımlı)
+
+  "=" ve ":" bu katmanlara düşmez; üst kurallarda yakalanır.
 *)
-Binary          = Unary { Operator Unary }
+Binary          = BinaryLevel0
 
 (*
   Unary — önek tekli operatör
   ────────────────────────────
-  Yalnızca SYMBOL token'ları unary operatör olabilir (şimdilik).
-  Ardında Term başlıyorsa (literal, "(", "{") unary olarak işlenir.
-
     -5      →  UNARY_OP( -, 5 )
     !flag   →  UNARY_OP( !, flag )
     -(x+1)  →  UNARY_OP( -, BINARY(x,+,1) )
 *)
-Unary           = [ UnaryOp ] Term
+Unary           = [ UnaryOp ] Unary
+                | Term
 
 (*
-  Term — en yüksek öncelik
-  ─────────────────────────
-  Parantez içinde tam Expression işlenir:
-    (a = b) + 2   geçerli — lvalue olarak kullanım
-  Blok değer olarak kullanılabilir:
-    r = { n = 1; n + 2; };
-  Fonksiyon çağrısı: IDENTIFIER "(" [ ArgumentList ] ")"
-    print(42);          →  FunctionCall
-    apply(f, g(x));     →  iç içe FunctionCall
+  Term — postfix zinciri
+  ───────────────────────
+  Çağrı, üye erişimi ve indeksleme soldan sağa zincirlenir:
+    f(x)(y)      →  CALL( CALL(f, x), y )
+    a.b.c        →  MEMBER:c( MEMBER:b(a) )
+    obj.xs[0](z) →  CALL( INDEX( MEMBER:xs(obj), 0 ), z )
 *)
-Term            = FunctionCall
-                | "(" Expression ")"
-                | Block
-                | Literal
+Term            = Primary { CallSuffix | MemberSuffix | IndexSuffix }
 
-FunctionCall    = T_IDENTIFIER "(" [ ArgumentList ] ")"
+CallSuffix      = "(" [ ArgumentList ] ")"
+MemberSuffix    = "." T_IDENTIFIER
+IndexSuffix     = "[" Expression "]"
 
 ArgumentList    = Expression { "," Expression }
+
+Primary         = "(" Expression ")"
+                | Block
+                | ArrayLiteral
+                | IfExpr
+                | WhileExpr
+                | ForExpr
+                | Literal
+
+ArrayLiteral    = "[" [ Expression { "," Expression } [ "," ] ] "]"
+
+
+(* ------------------------------------------------------------------ *)
+(*  AKIŞ DENETİMİ  (hepsi birer ifadedir — değer döndürürler)         *)
+(* ------------------------------------------------------------------ *)
+
+IfExpr          = "if" Expression Block [ "else" ( IfExpr | Block ) ]
+
+(*
+  Değeri seçilen dalın blok değeridir; else dalı yoksa ve koşul yanlışsa
+  unit döner. Koşul kesin olarak bool olmalıdır (truthy dönüşümü yoktur).
+
+    r = if x > 0 { 1; } else { -1; };
+*)
+
+WhileExpr       = "while" Expression Block
+
+(*
+  Değeri son çalışan yinelemenin gövde değeridir; hiç çalışmazsa unit.
+*)
+
+ForExpr         = "for" T_IDENTIFIER "in" Expression Block
+
+(*
+  Dizi ya da string üzerinde gezer. Döngü değişkeni her yinelemede yeni
+  bir kapsamda tanımlanır ve döngüden sonra görünmez.
+*)
 
 
 (* ------------------------------------------------------------------ *)
@@ -159,18 +223,15 @@ ArgumentList    = Expression { "," Expression }
   "->" fonksiyon tipi oluşturur; currying doğal olarak desteklenir.
 
     i32
+    [i32]
     (x:i32, y:i32) -> i32
     (x:i32) -> (y:i32) -> bool    →    (x:i32) -> ((y:i32) -> bool)
 *)
 TypeExpr        = TupleTypeExpr "->" TypeExpr
                 | TupleTypeExpr
 
-(*
-  TupleTypeExpr:
-    "(" ile başlarsa parametre listesi veya tuple tipidir.
-    Tek isim ise doğrudan tip ismidir.
-*)
 TupleTypeExpr   = "(" [ TypeParamList ] ")"
+                | "[" TypeExpr "]"                 (* dizi tipi *)
                 | T_IDENTIFIER
 
 TypeParamList   = TypeParam { "," TypeParam }
@@ -178,33 +239,11 @@ TypeParamList   = TypeParam { "," TypeParam }
 (*
   TypeParam — isimli veya isimsiz
   ────────────────────────────────
-    x : i32     →  isimli
-    i32         →  isimsiz
+    x : i32     →  isimli   (fonksiyon tanımında zorunlu)
+    i32         →  isimsiz  (yalnızca tip bildiriminde)
 *)
 TypeParam       = T_IDENTIFIER ":" TypeExpr
                 | TypeExpr
-
-
-(* ------------------------------------------------------------------ *)
-(*  FONKSIYON ÇAĞRISI                                                  *)
-(* ------------------------------------------------------------------ *)
-
-(*
-  FunctionCall = T_IDENTIFIER "(" [ ArgumentList ] ")"
-  
-  Açıklamalar:
-    - IDENTIFIER fonksiyon ismi olmalıdır (operatör değil)
-    - Argümanlar virgülle ayrılmış, tam Expression'lardır
-    - Term seviyesinde parse edilmesiyle parantez tutarsızlığı önlenir
-  
-  Örnekler:
-    print(x)
-    add(1, 2, 3)
-    apply(f, g(y), h(z))
-*)
-
-FunctionCall    = T_IDENTIFIER "(" [ ArgumentList ] ")"
-ArgumentList    = Expression { "," Expression }
 
 
 (* ------------------------------------------------------------------ *)
@@ -213,15 +252,14 @@ ArgumentList    = Expression { "," Expression }
 
 (*
   Lexer çok karakterli sembolleri symbols.txt'den yükler ve tek token
-  üretir (örn: "->", "==", "+=", "**", "::").
-  Parser bitişik sembol token'larını birleştirebilir (lexer dışı kaldıysa).
-
-  UnaryOp : yalnızca T_SYMBOL, ardından Term geliyorsa.
-  Operator: "=", ":", terminatörler dışındaki T_SYMBOL veya T_IDENTIFIER.
+  üretir (örn: "->", "==", "+=", "**", "::"). Parser bitişik sembolleri
+  BİRLEŞTİRMEZ: bir operatör tam olarak bir T_SYMBOL token'ıdır.
+  Yeni operatör = symbols.txt'e bir satır (öncelik tablosunda yoksa
+  en düşük binary seviyeye düşer).
 *)
 
-Operator        = ( T_SYMBOL | T_IDENTIFIER ) { T_SYMBOL }
-UnaryOp         = T_SYMBOL
+Operator        = T_SYMBOL
+UnaryOp         = "-" | "+" | "!" | "~"
 
 
 (* ------------------------------------------------------------------ *)
@@ -232,7 +270,7 @@ Literal         = T_STRING
                 | T_CHAR
                 | T_NUMBER
                 | T_IDENTIFIER
-                | T_SYMBOL
+                | "true" | "false"
                 | PrimitiveType
 
 PrimitiveType   = "i8"  | "i16" | "i32" | "i64"
@@ -240,26 +278,56 @@ PrimitiveType   = "i8"  | "i16" | "i32" | "i64"
                 | "f32" | "f64"
                 | "bool"| "char"
 
+(*
+  "str" bir tip adıdır ama PrimitiveType listesinde değildir: ifade
+  konumunda `str(...)` dönüşüm fonksiyonu olarak çözülür.
+*)
+
+
+(* ------------------------------------------------------------------ *)
+(*  ANAHTAR SÖZCÜKLER                                                  *)
+(* ------------------------------------------------------------------ *)
+
+(*
+  if  else  while  for  in  return  break  continue  true  false
+
+  Lexer bunları T_IDENTIFIER olarak üretir; ayrımı parser yapar.
+  Değişken adı olarak kullanılamazlar ("true"/"false" birer literaldir).
+*)
+
+
+(* ------------------------------------------------------------------ *)
+(*  YORUMLAR                                                           *)
+(* ------------------------------------------------------------------ *)
+
+(*
+  // satır sonuna kadar
+  /* blok — iç içe geçmez */
+
+  Yorumlar lexer seviyesinde tamamen atılır; parser'a token ulaşmaz.
+*)
+
 
 (* ------------------------------------------------------------------ *)
 (*  TERMİNATÖRLER  (operatör veya unary başlatamaz)                   *)
 (* ------------------------------------------------------------------ *)
 
 (*
-  ; ( ) { } ,   →  expression / tip / blok sınırları
-  = :           →  Assign ve TypeBind tarafından ayrı yakalanır
+  ; ( ) { } [ ] ,   →  expression / tip / blok sınırları
+  = : ve bileşik atamalar → Assign ve TypeBind tarafından ayrı yakalanır
 *)
 
 
 (* ================================================================== *)
 (*  ÖNCELIK TABLOSU  (düşük → yüksek)                                 *)
 (*                                                                    *)
-(*   Seviye  Kural       Sembol        Çağrışım                       *)
-(*   ──────  ─────────   ──────────    ─────────                      *)
-(*     1     Assign      =             Sağ                            *)
-(*     2     TypeBind    :             Sağ   (sağ → TypeExpr)         *)
-(*     3     Binary      tüm op'lar    Sol                            *)
-(*     4     Unary       !  -  ~  …    —     (önek)                   *)
-(*     5     Term        ()  {}  lit   —                              *)
-(*     —     TypeExpr    ->            Sağ   (yalnızca : sağında)     *)
+(*   Seviye  Kural       Sembol             Çağrışım                  *)
+(*   ──────  ─────────   ──────────────     ─────────                 *)
+(*     1     Assign      = += -= …          Sağ                       *)
+(*     2     TypeBind    :                  Sağ   (sağ → TypeExpr)    *)
+(*     3     Binary      11 katman (bkz.)   Sol   ("**" sağ)          *)
+(*     4     Unary       - + ! ~            —     (önek)              *)
+(*     5     Term        f(x) a.b a[i]      Sol   (postfix zinciri)   *)
+(*     6     Primary     () {} [] literal   —                         *)
+(*     —     TypeExpr    ->                 Sağ   (yalnızca : sağında)*)
 (* ================================================================== *)

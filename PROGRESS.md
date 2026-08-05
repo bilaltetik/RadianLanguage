@@ -66,8 +66,10 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [ ] Modül / `import` sistemi.
 
 ### Faz 5 — Kalite / dokümantasyon
-- [ ] `Grammer.md`, `Radian.ebnf`, `PARSER_UPDATE_GUIDE.md` kodla senkron.
-- [ ] Kök `README.md` gerçek içerik.
+- [x] `Grammer.md` ve `Radian.ebnf` kodla senkron; belge örnekleri testlerde çalışıyor.
+- [~] `PARSER_UPDATE_GUIDE.md` kodla senkron.
+- [x] Kök `README.md` gerçek içerik.
+- [x] `CLAUDE.md` güncel mimariyi anlatıyor.
 
 ---
 
@@ -91,6 +93,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 15 | Negatif indeks hatadır (Python'daki sondan sayma yok). | Sınır dışı erişimi sessizce başka bir elemana çevirmemek için. |
 | 16 | `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır; 0..255 arası dönüş değeri süreç çıkış kodudur. | `main () -> i32 { … }` örneğinin dokümanlardaki anlamını gerçeklemek için. |
 | 17 | İfade konumundaki primitive tip adı (`bool`, `char`) aynı adlı bir değer tanımlıysa o değere çözülür. | `bool(x)` dönüşüm fonksiyonu ile `x : bool` tip adı çakışmasın diye. |
+| 18 | Belgelerdeki çalıştırılabilir örnekler ` ```radian ` ile etiketlenir ve `tests/test_docs.py` tarafından koşulur. | Doküman/kod ayrışması (bu depoda bir kez yaşandı) testle yakalanır. |
 | 8 | Dizi indeksleme `a[i]` postfix zincirinde; `[` tek karakterli sembol olarak zaten lexleniyor. | Çağrı/üye erişimiyle aynı katman → `a.b[0](x)` doğal çalışır. |
 
 ---
