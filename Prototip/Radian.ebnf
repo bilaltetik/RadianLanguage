@@ -186,12 +186,29 @@ ArgumentList    = Expression { "," Expression }
 Primary         = "(" Expression ")"
                 | Block
                 | ArrayLiteral
+                | MapLiteral
                 | IfExpr
                 | WhileExpr
                 | ForExpr
                 | Literal
 
 ArrayLiteral    = "[" [ Expression { "," Expression } [ "," ] ] "]"
+
+MapLiteral      = "#" "[" [ MapEntry { "," MapEntry } [ "," ] ] "]"
+MapEntry        = Binary ":" Expression
+
+(*
+  Harita literali "{" ile yazılamaz: "{" blok başlatır ve "{a: T}" biçimi
+  TypeBind ile çakışır. Bu yüzden ayrı bir açılış işareti kullanılır.
+
+    #[]                        (* boş harita *)
+    #["a": 1, "b": 2]
+    #[1: "bir", 2.5: "iki"]    (* anahtar sayı da olabilir *)
+
+  Anahtar Binary seviyesinde okunur — aksi halde ":" TypeBind sanılırdı.
+  Anahtar str, int ya da float olmalıdır; bool anahtar yasaktır (Radian'da
+  1 == true yanlıştır, oysa aynı sözlük anahtarına düşerlerdi).
+*)
 
 
 (* ------------------------------------------------------------------ *)
@@ -288,8 +305,8 @@ PrimitiveType   = "i8"  | "i16" | "i32" | "i64"
                 | "bool"| "char"
 
 (*
-  "str" bir tip adıdır ama PrimitiveType listesinde değildir: ifade
-  konumunda `str(...)` dönüşüm fonksiyonu olarak çözülür.
+  "str" ve "map" birer tip adıdır ama PrimitiveType listesinde değildirler:
+  ifade konumunda `str(...)` / `map(...)` fonksiyonları olarak çözülürler.
 *)
 
 

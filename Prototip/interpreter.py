@@ -210,6 +210,8 @@ def type_name(value) -> str:
         return "char" if len(value) == 1 else "str"
     if isinstance(value, list):
         return "array"
+    if isinstance(value, dict):
+        return "map"
     if isinstance(value, CALLABLE_TYPES):
         return "func"
     if value is UNIT:
@@ -312,7 +314,29 @@ def check_type(value, type_node: Node | None, name: str = "",
                 f"{type_name(value)} bulundu", node)
         return
 
+    if tname == "map":
+        if not isinstance(value, dict):
+            raise RadianError(
+                f"Tip uyuşmazlığı{where}: map bekleniyordu, "
+                f"{type_name(value)} bulundu", node)
+        return
+
     # Kullanıcı tanımlı / bilinmeyen tip adı → şimdilik serbest
+
+
+def map_key(value, node: Node | None = None):
+    """Harita anahtarı olarak geçerli mi? Değilse RadianError.
+
+    bool kabul edilmez: Python sözlüğünde `true` ile `1` aynı anahtara
+    düşerdi, oysa Radian'da `1 == true` yanlıştır.
+    """
+    if isinstance(value, bool):
+        raise RadianError("Harita anahtarı bool olamaz", node)
+    if isinstance(value, (str, int, float)):
+        return value
+    raise RadianError(
+        f"Harita anahtarı sayı ya da str olmalı, {type_name(value)} bulundu",
+        node)
 
 
 def zero_value(type_node: Node | None):
@@ -331,6 +355,8 @@ def zero_value(type_node: Node | None):
             return False
         if tname in ("str", "char"):
             return ""
+        if tname == "map":
+            return {}
     return UNIT
 
 
@@ -358,6 +384,14 @@ def to_display(value, _seen: set | None = None) -> str:
             return "[...]"                        # döngüsel referans
         seen = seen | {id(value)}
         return "[" + ", ".join(to_repr(v, seen) for v in value) + "]"
+    if isinstance(value, dict):
+        seen = _seen or set()
+        if id(value) in seen:
+            return "#[...]"
+        seen = seen | {id(value)}
+        inner = ", ".join(f"{to_repr(k, seen)}: {to_repr(v, seen)}"
+                          for k, v in value.items())
+        return "#[" + inner + "]"
     return repr(value)
 
 
@@ -585,9 +619,12 @@ class Interpreter:
             obj_node, index_node = target.children
             obj   = self.eval(obj_node, env)
             index = self.eval(index_node, env)
+            if isinstance(obj, dict):
+                obj[map_key(index, target)] = value     # yoksa ekler
+                return value
             if not isinstance(obj, list):
                 raise RadianError(
-                    f"İndeksle atama yalnızca dizilerde geçerli, "
+                    f"İndeksle atama yalnızca dizi ve haritalarda geçerli, "
                     f"{type_name(obj)} bulundu", target)
             self._check_index(obj, index, target)
             obj[index] = value
@@ -814,10 +851,26 @@ class Interpreter:
     def _eval_array(self, node: Node, env: Environment):
         return [self.eval(child, env) for child in node.children]
 
+    def _eval_map(self, node: Node, env: Environment):
+        result: dict = {}
+        children = node.children
+        for i in range(0, len(children), 2):
+            key   = map_key(self.eval(children[i], env), node)
+            value = self.eval(children[i + 1], env)
+            result[key] = value
+        return result
+
     def _eval_index(self, node: Node, env: Environment):
         obj_node, index_node = node.children
         obj   = self.eval(obj_node, env)
         index = self.eval(index_node, env)
+
+        if isinstance(obj, dict):
+            key = map_key(index, node)
+            if key not in obj:
+                raise RadianError(
+                    f"Haritada anahtar yok: {to_repr(key)}", node)
+            return obj[key]
 
         if isinstance(obj, (list, str)):
             self._check_index(obj, index, node)
@@ -964,6 +1017,8 @@ class Interpreter:
             items = list(iterable)
         elif isinstance(iterable, list):
             items = list(iterable)
+        elif isinstance(iterable, dict):
+            items = list(iterable.keys())            # harita → anahtarlar
         else:
             raise RadianError(
                 f"{type_name(iterable)} üzerinde döngü kurulamaz", node)
@@ -1016,6 +1071,7 @@ Interpreter._DISPATCH = {
     NodeType.LITERAL:    Interpreter._eval_literal,
     NodeType.IDENTIFIER: Interpreter._eval_identifier,
     NodeType.ARRAY:      Interpreter._eval_array,
+    NodeType.MAP:        Interpreter._eval_map,
     NodeType.INDEX:      Interpreter._eval_index,
     NodeType.MEMBER:     Interpreter._eval_member,
     NodeType.CALL:       Interpreter._eval_call,
@@ -1056,7 +1112,7 @@ def _bi_write(interp: Interpreter, args, node):
 
 def _bi_len(interp, args, node):
     value = args[0]
-    if isinstance(value, (str, list)):
+    if isinstance(value, (str, list, dict)):
         return len(value)
     raise RadianError(f"len() {type_name(value)} için tanımlı değil", node)
 
@@ -1100,13 +1156,31 @@ def _bi_bool(interp, args, node):
         return value
     if _is_number(value):
         return value != 0
-    if isinstance(value, (str, list)):
+    if isinstance(value, (str, list, dict)):
         return len(value) > 0
     return value is not UNIT
 
 
 def _bi_type(interp, args, node):
     return type_name(args[0])
+
+
+def _bi_map(interp, args, node):
+    """map()  →  boş harita;  map(ikililer)  →  [[k, v], …] listesinden."""
+    if not args:
+        return {}
+    pairs = args[0]
+    if not isinstance(pairs, list):
+        raise RadianError(
+            f"map() [anahtar, değer] ikilileri bekler, "
+            f"{type_name(pairs)} bulundu", node)
+    result: dict = {}
+    for pair in pairs:
+        if not isinstance(pair, list) or len(pair) != 2:
+            raise RadianError(
+                "map() her girdide tam olarak [anahtar, değer] bekler", node)
+        result[map_key(pair[0], node)] = pair[1]
+    return result
 
 
 def _bi_range(interp, args, node):
@@ -1182,6 +1256,7 @@ _BUILTIN_SPECS = [
     ("float",  _bi_float,  1),
     ("bool",   _bi_bool,   1),
     ("type",   _bi_type,   1),
+    ("map",    _bi_map,    (0, 1)),
     ("range",  _bi_range,  (1, 3)),
     ("abs",    _bi_abs,    1),
     ("min",    _bi_min,    (1, None)),
@@ -1411,6 +1486,78 @@ STRING_METHODS = dict([
 ])
 
 
+# --- harita metotları -------------------------------------------------------
+
+def _m_map_len(interp, m, args, node):
+    return len(m)
+
+
+def _m_map_has(interp, m, args, node):
+    return map_key(args[0], node) in m
+
+
+def _m_map_get(interp, m, args, node):
+    key = map_key(args[0], node)
+    if key in m:
+        return m[key]
+    if len(args) > 1:
+        return args[1]
+    raise RadianError(f"Haritada anahtar yok: {to_repr(key)}", node)
+
+
+def _m_map_set(interp, m, args, node):
+    m[map_key(args[0], node)] = args[1]
+    return m
+
+
+def _m_map_remove(interp, m, args, node):
+    key = map_key(args[0], node)
+    if key not in m:
+        raise RadianError(f"Haritada anahtar yok: {to_repr(key)}", node)
+    return m.pop(key)
+
+
+def _m_map_keys(interp, m, args, node):
+    return list(m.keys())
+
+
+def _m_map_values(interp, m, args, node):
+    return list(m.values())
+
+
+def _m_map_pairs(interp, m, args, node):
+    return [[k, v] for k, v in m.items()]
+
+
+def _m_map_clear(interp, m, args, node):
+    m.clear()
+    return m
+
+
+def _m_map_merge(interp, m, args, node):
+    other = args[0]
+    if not isinstance(other, dict):
+        raise RadianError(
+            f"merge(): map bekleniyordu, {type_name(other)} bulundu", node)
+    merged = dict(m)
+    merged.update(other)
+    return merged
+
+
+MAP_METHODS = dict([
+    _method("len",    0)(_m_map_len),
+    _method("has",    1)(_m_map_has),
+    _method("get",    (1, 2))(_m_map_get),
+    _method("set",    2)(_m_map_set),
+    _method("remove", 1)(_m_map_remove),
+    _method("keys",   0)(_m_map_keys),
+    _method("values", 0)(_m_map_values),
+    _method("pairs",  0)(_m_map_pairs),
+    _method("clear",  0)(_m_map_clear),
+    _method("merge",  1)(_m_map_merge),
+])
+
+
 # --- sayı metotları ---------------------------------------------------------
 
 def _m_num_abs(interp, n, args, node):
@@ -1446,6 +1593,8 @@ NUMBER_METHODS = dict([
 def _method_table(value) -> dict:
     if isinstance(value, list):
         return ARRAY_METHODS
+    if isinstance(value, dict):
+        return MAP_METHODS
     if isinstance(value, str):
         return STRING_METHODS
     if _is_number(value):

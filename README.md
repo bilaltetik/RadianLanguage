@@ -39,13 +39,13 @@ python3 run_tests.py                       # tüm testler
 
 | Alan | Destek |
 |------|--------|
-| Değerler | tamsayı (`0xFF`, `0b1010`, `1_000`), ondalık, `str`, `char`, `bool`, dizi |
-| Tipler | `i8…i64`, `u8…u64`, `f32/f64`, `bool`, `char`, `str`, `[T]`, fonksiyon tipleri |
+| Değerler | tamsayı (`0xFF`, `0b1010`, `1_000`), ondalık, `str`, `char`, `bool`, dizi, harita |
+| Tipler | `i8…i64`, `u8…u64`, `f32/f64`, `bool`, `char`, `str`, `[T]`, `map`, fonksiyon tipleri |
 | Tip bağlama | `x : i32 = 42;` — çalışma zamanında doğrulanır (aralık denetimi dahil) |
-| Operatörler | 11 öncelik katmanı, `**` sağ-çağrışımlı, bileşik atamalar (`+=`, `<<=`, …) |
+| Operatörler | 11 öncelik katmanı, `**` sağ-çağrışımlı, bileşik atamalar (`+=`, `<<=`, …), `++`/`--` |
 | Akış denetimi | `if`/`else if`/`else`, `while`, `for … in`, `break`, `continue`, `return` |
 | Fonksiyonlar | özyineleme, closure, yüksek mertebeden fonksiyonlar, currying |
-| Veri işleme | dizi/string metotları: `map` `filter` `reduce` `sort` `split` `join` … |
+| Veri işleme | dizi/harita/string metotları: `map` `filter` `reduce` `sort` `split` `join` `keys` … |
 | Diğer | `//` ve `/* */` yorumları, blok = ifade (son statement'ın değeri) |
 
 Her şey bir **ifadedir**: bloklar, `if`, `while` ve `for` değer döndürür.

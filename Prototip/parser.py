@@ -33,6 +33,7 @@ class NodeType(Enum):
     MEMBER     = auto()  # value = üye adı, children = [nesne]        →  a.b
     INDEX      = auto()  # children = [nesne, indeks]                 →  a[i]
     ARRAY      = auto()  # children = elemanlar                       →  [1, 2]
+    MAP        = auto()  # children = [anahtar, değer, …] ikişerli    →  #["a": 1]
     IF         = auto()  # children = [koşul, then-Block, else?]
     WHILE      = auto()  # children = [koşul, gövde-Block]
     FOR        = auto()  # value = döngü değişkeni, children = [dizi, gövde]
@@ -521,6 +522,11 @@ class Parser:
         if self.match("["):
             return self._parse_array()
 
+        # Harita literali: #["a": 1, "b": 2]
+        # "{" blok/TypeBind ile çakıştığı için ayrı bir açılış işareti kullanılır.
+        if self.match("#") and self.peek(1) is not None and self.peek(1).value == "[":
+            return self._parse_map()
+
         if self.match_keyword("if"):
             return self._parse_if()
 
@@ -593,6 +599,32 @@ class Parser:
             elif not self.match("]"):
                 raise ParseError("Dizi elemanları arasında ',' beklendi",
                                  self.current())
+        self.expect("]")
+        return node
+
+    # ------------------------------------------------------------------
+    # MapLiteral = "#" "[" [ MapEntry { "," MapEntry } [ "," ] ] "]"
+    # MapEntry   = Binary ":" Expression
+    #
+    # Anahtar Binary seviyesinde okunur; aksi halde ":" TypeBind olarak
+    # yorumlanırdı. Çocuklar ikişerli sırayla [anahtar, değer, …] durur.
+    # ------------------------------------------------------------------
+
+    def _parse_map(self) -> Node:
+        hash_tok = self.advance()                        # "#"
+        self.expect("[")
+        node = Node(NodeType.MAP, hash_tok)
+
+        while not self.match("]"):
+            node.add(self._parse_binary())               # anahtar (":" yemez)
+            self.expect(":")
+            node.add(self._parse_expression())           # değer
+            if self.match(","):
+                self.advance()
+            elif not self.match("]"):
+                raise ParseError("Harita girdileri arasında ',' beklendi",
+                                 self.current())
+
         self.expect("]")
         return node
 

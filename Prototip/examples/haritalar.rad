@@ -1,0 +1,49 @@
+// Harita (map) — anahtar/değer eşlemesi.
+//
+// Literal biçim "#[anahtar: değer]"dir; "{" blok ve tip bağlama ile
+// çakıştığı için ayrı bir açılış işareti kullanılır.
+
+// Bir metindeki kelimeleri sayar.
+kelime_say (metin:str) -> map {
+    sayim = #[];
+    for kelime in metin.lower().split(" ") {
+        if kelime.len() == 0 { continue; }
+        sayim[kelime] = sayim.get(kelime, 0) + 1;
+    }
+    sayim;
+}
+
+main () -> i32 {
+    // Literal, okuma, ekleme
+    baskentler = #["Türkiye": "Ankara", "Japonya": "Tokyo"];
+    baskentler["Fransa"] = "Paris";
+    print("başkentler :", baskentler);
+    print("Japonya    :", baskentler["Japonya"]);
+    print("kaç ülke   :", baskentler.len());
+
+    // Sorgulama — eksik anahtar okumak hatadır, get() varsayılan alır
+    print("var mı?    :", baskentler.has("Almanya"));
+    print("varsayılan :", baskentler.get("Almanya", "bilinmiyor"));
+
+    // Anahtarlar üzerinde gezinme
+    for ulke in baskentler {
+        write(ulke, " → ", baskentler[ulke], "; ");
+    }
+    print("");
+
+    // İkililerden harita kurma
+    kodlar = map([["tr", 90], ["jp", 81]]);
+    print("kodlar     :", kodlar);
+
+    // Kelime sayacı
+    sayim = kelime_say("bir iki bir üç iki bir");
+    print("sayım      :", sayim);
+    assert(sayim["bir"] == 3, "kelime sayacı yanlış");
+
+    // Birleştirme yeni bir harita döndürür
+    a = #["x": 1];
+    b = a.merge(#["y": 2]);
+    print("a =", a, " b =", b);
+
+    0;
+}

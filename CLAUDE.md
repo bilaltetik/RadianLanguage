@@ -40,7 +40,7 @@ Scripts are meant to be run with `Prototip/` as the working directory
 ```bash
 cd Prototip
 
-python3 run_tests.py              # full suite (~226 tests)
+python3 run_tests.py              # full suite (~283 tests)
 python3 run_tests.py -v           # verbose
 python3 run_tests.py test_parser  # one module
 
@@ -58,8 +58,9 @@ New behaviour needs a test in `tests/` — the `__main__` case tables in
 `lexer.py`/`parser.py` are demos, not tests.
 
 Test modules: `test_lexer`, `test_parser`, `test_interpreter`, `test_examples`
-(runs every `examples/*.rad` end to end plus the CLI via subprocess), and
-`test_docs` (executes every ` ```radian ` block in `Grammer.md`, `README.md`,
+(runs every `examples/*.rad` end to end plus the CLI via subprocess),
+`test_robustness` (asserts that only ParseError/RadianError can escape, for a
+table of hostile inputs), and `test_docs` (executes every ` ```radian ` block in `Grammer.md`, `README.md`,
 and `PARSER_UPDATE_GUIDE.md`). Consequences worth knowing:
 
 - Adding a file to `examples/` **requires** adding an entry to `EXAMPLES` in
@@ -95,7 +96,7 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
                   → _parse_binary(level) (table-driven, 11 levels from BINARY_LEVELS)
                   → _parse_unary (prefix - + ! ~)
                   → _parse_term (postfix chain: call / member / index)
-                  → _parse_primary (parens / block / array / if / while / for / literal)
+                  → _parse_primary (parens / block / array / map / if / while / for / literal)
 ```
 
 - `BINARY_LEVELS` is the precedence table; a symbol that is in `symbols.txt` but
@@ -121,8 +122,10 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
 `Interpreter.eval(node, env)` dispatches through the `_DISPATCH` dict keyed by
 `NodeType` — adding a node type means adding an entry there.
 
-- Values are plain Python objects (`int`, `float`, `str`, `bool`, `list`) plus
-  `Function`, `Builtin`, `BoundMethod`, and the `UNIT` singleton.
+- Values are plain Python objects (`int`, `float`, `str`, `bool`, `list`, `dict`)
+  plus `Function`, `Builtin`, `BoundMethod`, and the `UNIT` singleton.
+- Maps use `#[k: v]` literals — `{` was unavailable (blocks) and `{a: T}`
+  collides with TypeBind. Keys go through `map_key()`, which rejects `bool`.
 - `Environment` is a parent-linked scope holding both values and declared types.
   `=` updates the nearest binding in the chain, or defines in the current scope.
 - Type binding validates without coercing (`check_type`), including sized-int
@@ -131,8 +134,10 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
   signals cannot cross a function boundary.
 - Conditions and `&&`/`||`/`!` require real `bool`s — no truthiness.
 - Integer `/` truncates toward zero and `%` follows the dividend's sign (C-style).
-- Builtins live in `_BUILTIN_SPECS`; methods in `ARRAY_METHODS` /
+- Builtins live in `_BUILTIN_SPECS`; methods in `ARRAY_METHODS` / `MAP_METHODS` /
   `STRING_METHODS` / `NUMBER_METHODS`, reached via `_method_table()`.
+- Radian call depth is counted by the interpreter (`MAX_CALL_DEPTH`), not left
+  to Python's `RecursionError`.
 - `Interpreter(out=...)` redirects `print`/`write`, which is how tests capture output.
 - After the top-level statements, a zero-arg `main` is called automatically.
 

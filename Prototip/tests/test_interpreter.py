@@ -431,6 +431,78 @@ class TestArraysAndStrings(unittest.TestCase):
         self.assertIn("üyesi yok", str(ctx.exception))
 
 
+class TestMaps(unittest.TestCase):
+
+    def test_literal_ve_okuma(self):
+        self.assertEqual(run('m = #["a": 1, "b": 2]; m["a"];'), 1)
+
+    def test_bos_harita_ve_ekleme(self):
+        self.assertEqual(run('m = #[]; m["x"] = 5; m["x"];'), 5)
+
+    def test_map_yerlesigi(self):
+        self.assertEqual(run('m = map([["x", 1], ["y", 2]]); m["y"];'), 2)
+        self.assertEqual(run("len(map());"), 0)
+
+    def test_sayisal_anahtar(self):
+        self.assertEqual(run('m = #[1: "bir", 2: "iki"]; m[2];'), "iki")
+
+    def test_eksik_anahtar_hata(self):
+        with self.assertRaises(RadianError) as ctx:
+            run('m = #["a": 1]; m["yok"];')
+        self.assertIn("anahtar yok", str(ctx.exception))
+
+    def test_bool_anahtar_yasak(self):
+        with self.assertRaises(RadianError) as ctx:
+            run("m = #[true: 1];")
+        self.assertIn("bool olamaz", str(ctx.exception))
+
+    def test_dizi_anahtar_yasak(self):
+        with self.assertRaises(RadianError):
+            run("m = #[[1]: 2];")
+
+    def test_metotlar(self):
+        self.assertIs(run('#["a": 1].has("a");'), True)
+        self.assertIs(run('#["a": 1].has("z");'), False)
+        self.assertEqual(run('#["a": 1].get("z", 0);'), 0)
+        self.assertEqual(run('#["a": 1, "b": 2].keys();'), ["a", "b"])
+        self.assertEqual(run('#["a": 1, "b": 2].values();'), [1, 2])
+        self.assertEqual(run('#["a": 1].pairs();'), [["a", 1]])
+        self.assertEqual(run('#["a": 1].len();'), 1)
+        self.assertEqual(run('m = #["a": 1]; m.remove("a"); m.len();'), 0)
+        self.assertEqual(run('m = #["a": 1]; m.clear().len();'), 0)
+
+    def test_merge_yeni_harita_dondurur(self):
+        self.assertEqual(run('a = #["x": 1]; b = a.merge(#["y": 2]); '
+                             '[a.len(), b.len()];'), [1, 2])
+
+    def test_for_anahtarlar_uzerinde_gezer(self):
+        self.assertEqual(
+            run('m = #["a": 1, "b": 2]; t = 0; for k in m { t += m[k]; } t;'), 3)
+
+    def test_esitlik(self):
+        self.assertIs(run('#["a": 1] == #["a": 1];'), True)
+        self.assertIs(run('#["a": 1] == #["a": 2];'), False)
+
+    def test_tip_bagi(self):
+        self.assertEqual(run("m : map; m.len();"), 0)
+        with self.assertRaises(RadianError):
+            run("m : map = [1];")
+
+    def test_referans_degerdir(self):
+        self.assertEqual(run('a = #["x": 1]; b = a; b["y"] = 2; a.len();'), 2)
+
+    def test_gosterim(self):
+        self.assertEqual(output('print(#["a": 1, "b": [1, 2]]);'),
+                         '#["a": 1, "b": [1, 2]]\n')
+
+    def test_dongusel_gosterim(self):
+        self.assertEqual(output('m = #[]; m["k"] = m; print(m);'),
+                         '#["k": #[...]]\n')
+
+    def test_type_adi(self):
+        self.assertEqual(run("type(#[]);"), "map")
+
+
 class TestBuiltins(unittest.TestCase):
 
     def test_print(self):

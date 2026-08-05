@@ -66,7 +66,8 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] Döngüsel dizi referansı yazdırılabiliyor (`[...]`), çökmüyor.
 - [x] Özyineleme derinliği 162 → 1000 (kendi sayacımız + net Radian hatası).
 - [ ] Statik tip denetleyicisi (çalışma zamanı yerine parse sonrası).
-- [ ] Sözlük/map tipi, `struct`/kayıt tipleri.
+- [x] Harita (map) tipi: `#[k: v]` literali, indeksleme/atama, 10 metot.
+- [ ] `struct` / kayıt tipleri.
 - [ ] Modül / `import` sistemi.
 
 ### Faz 5 — Kalite / dokümantasyon
@@ -97,6 +98,8 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 15 | Negatif indeks hatadır (Python'daki sondan sayma yok). | Sınır dışı erişimi sessizce başka bir elemana çevirmemek için. |
 | 16 | `main` tanımlıysa üst düzey statement'lardan sonra otomatik çağrılır; 0..255 arası dönüş değeri süreç çıkış kodudur. | `main () -> i32 { … }` örneğinin dokümanlardaki anlamını gerçeklemek için. |
 | 17 | İfade konumundaki primitive tip adı (`bool`, `char`) aynı adlı bir değer tanımlıysa o değere çözülür. | `bool(x)` dönüşüm fonksiyonu ile `x : bool` tip adı çakışmasın diye. |
+| 21 | Harita literali `#[k: v]`; `{k: v}` kullanılmadı. | `{` blok başlatıyor ve `{a: T}` TypeBind ile çakışıyor — gramerde gerçek bir belirsizlik. Anahtar `Binary` seviyesinde okunur, böylece `:` TypeBind sanılmaz. |
+| 22 | Harita anahtarı `bool` olamaz. | Python sözlüğünde `true` ile `1` aynı anahtara düşerdi; Radian'da `1 == true` yanlış olduğu için bu tutarsız olurdu. |
 | 20 | Radian çağrı derinliği yorumlayıcıda sayılır (`MAX_CALL_DEPTH = 1000`), Python'un `RecursionError`'ına bırakılmaz. | Python limiti Radian çağrısı başına ~6 kare tükettiği için sınır 162'ye düşüyordu ve hata mesajı dilin dışındaydı. |
 | 19 | `++` / `--` kaldırılmak yerine gerçeklendi: hedef yalnızca IDENTIFIER ya da INDEX olabilir, ihlal **parse zamanında** hata verir. | `symbols.txt` bunları zaten tanımlıyordu; kaldırmak ilan edilen token kümesini daraltırdı. Lvalue denetimini parse zamanında yapmak `--5` gibi girdilere net mesaj verir. |
 | 18 | Belgelerdeki çalıştırılabilir örnekler ` ```radian ` ile etiketlenir ve `tests/test_docs.py` tarafından koşulur. | Doküman/kod ayrışması (bu depoda bir kez yaşandı) testle yakalanır. |
@@ -125,3 +128,5 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - `++` / `--` gerçeklendi (244 test yeşil).
 - Sağlamlık taraması: döngüsel dizi yazdırma çökmesi ve düşük özyineleme
   sınırı düzeltildi; düşmanca girdi tablosu teste dönüştürüldü (256 test yeşil).
+- Harita tipi eklendi: `#[k: v]` literali, `map()` yerleşiği, 10 metot,
+  `for` ile anahtar gezinme, `examples/haritalar.rad` (283 test yeşil).

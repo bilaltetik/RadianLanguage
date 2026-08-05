@@ -350,6 +350,48 @@ class TestArrays(unittest.TestCase):
                          "(TYPEBIND:: IDENTIFIER:xs (ARRAY:[ LITERAL:i32))")
 
 
+class TestMaps(unittest.TestCase):
+
+    def test_harita_literali(self):
+        self.assertEqual(sexp(parse_expr('#["a": 1];')),
+                         '(MAP:# LITERAL:"a" LITERAL:1)')
+
+    def test_bos_harita(self):
+        self.assertEqual(sexp(parse_expr("#[];")), "MAP:#")
+
+    def test_cok_girdili(self):
+        node = parse_expr('#["a": 1, "b": 2];')
+        self.assertEqual(node.type, NodeType.MAP)
+        self.assertEqual(len(node.children), 4)        # ikişerli: k, v, k, v
+
+    def test_sondaki_virgul_serbest(self):
+        self.assertEqual(len(parse_expr('#["a": 1,];').children), 2)
+
+    def test_anahtar_ifade_olabilir(self):
+        node = parse_expr("#[1 + 1: 'x'];")
+        self.assertEqual(node.children[0].type, NodeType.BINARY_OP)
+
+    def test_deger_tam_ifadedir(self):
+        node = parse_expr('#["a": 1 + 2 * 3];')
+        self.assertEqual(node.children[1].type, NodeType.BINARY_OP)
+
+    def test_ic_ice_harita(self):
+        node = parse_expr('#["a": #["b": 1]];')
+        self.assertEqual(node.children[1].type, NodeType.MAP)
+
+    def test_eksik_iki_nokta(self):
+        with self.assertRaises(ParseError):
+            parse('#["a" 1];')
+
+    def test_eksik_virgul(self):
+        with self.assertRaises(ParseError):
+            parse('#["a": 1 "b": 2];')
+
+    def test_blok_ile_karistirilmaz(self):
+        # "{" hâlâ blok; harita için "#[" gerekir
+        self.assertEqual(parse_expr("x = {};").children[1].type, NodeType.BLOCK)
+
+
 class TestControlFlow(unittest.TestCase):
 
     def test_if_else(self):

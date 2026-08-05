@@ -80,11 +80,13 @@ ArgumentList  = Expression { "," Expression }
 
 Primary       = "(" Expression ")"
               | Block
-              | ArrayLiteral
+              | ArrayLiteral | MapLiteral
               | IfExpr | WhileExpr | ForExpr
               | Literal
 
 ArrayLiteral  = "[" [ Expression { "," Expression } [ "," ] ] "]"
+MapLiteral    = "#" "[" [ MapEntry { "," MapEntry } [ "," ] ] "]"
+MapEntry      = Binary ":" Expression
 
 (* ──────────── AKIŞ DENETİMİ (hepsi ifadedir) ──────────── *)
 
@@ -464,6 +466,42 @@ assert(harfler == "naidar");
 - String'ler indekslenebilir ve `for` ile gezilebilir; `s[0]` tek karakterlik
   bir string döndürür.
 
+### Haritalar
+
+Harita literali `#[anahtar: değer]` biçimindedir. `{` blok başlattığı ve
+`{a: T}` tip bağlama ile çakıştığı için ayrı bir açılış işareti kullanılır.
+
+```radian
+m = #["a": 1, "b": 2];
+assert(m["a"] == 1);
+
+m["c"] = 3;                        // yoksa ekler
+assert(m.len() == 3);
+assert(m.has("c"));
+assert(m.get("yok", 0) == 0);      // eksik anahtar okumak hatadır, get() güvenli
+
+// Anahtarlar üzerinde gezinme
+toplam = 0;
+for k in m { toplam += m[k]; }
+assert(toplam == 6);
+
+// Anahtar sayı da olabilir
+sayilar = #[1: "bir", 2: "iki"];
+assert(sayilar[2] == "iki");
+
+// İkililerden kurma ve birleştirme
+kodlar = map([["tr", 90], ["jp", 81]]);
+assert(kodlar["tr"] == 90);
+birlesik = #["x": 1].merge(#["y": 2]);
+assert(birlesik.keys() == ["x", "y"]);
+```
+
+- Anahtar `str`, `int` ya da `float` olabilir; **`bool` anahtar yasaktır**
+  (Radian'da `1 == true` yanlıştır, oysa aynı anahtara düşerlerdi).
+- Eksik anahtarı `m[k]` ile okumak hatadır; `m.get(k, varsayılan)` güvenlidir.
+- Haritalar da diziler gibi **referans değerdir**; `merge` yeni harita döndürür.
+- `for k in m` anahtarlar üzerinde gezer.
+
 Metot listesi için bkz. [§5 Çalışma Zamanı Semantiği](#5-çalışma-zamanı-semantiği).
 
 ---
@@ -530,6 +568,7 @@ main () -> i32 {
 | `bool` | Python `bool` | `"bool"` |
 | `char` `str` | Python `str` | `"char"` / `"str"` |
 | `[T]` | Python `list` | `"array"` |
+| `map` | Python `dict` | `"map"` |
 | fonksiyon | `Function` / `Builtin` | `"func"` |
 | unit | `UNIT` | `"unit"` |
 
@@ -570,6 +609,7 @@ parametre ve dönüş tipleri denetlenir.
 | `str/int/float/bool(x)` | 1 | Tip dönüşümü |
 | `type(x)` | 1 | Çalışma zamanı tip adı |
 | `range(a[,b[,c]])` | 1–3 | Tamsayı dizisi |
+| `map([ikililer])` | 0–1 | Boş harita ya da `[[k, v], …]` listesinden harita |
 | `abs/min/max/sum` | — | Sayısal yardımcılar (dizi ya da çoklu argüman) |
 | `assert(c[,msg])` | 1–2 | Koşul yanlışsa hata fırlatır |
 
@@ -577,6 +617,7 @@ parametre ve dönüş tipleri denetlenir.
 
 - **Dizi:** `len push pop insert remove contains index_of slice reverse join
   map filter reduce sort`
+- **Harita:** `len has get set remove keys values pairs clear merge`
 - **String:** `len upper lower trim split contains starts_with ends_with
   replace find slice chars repeat`
 - **Sayı:** `abs to_str min max`
@@ -622,6 +663,7 @@ aralığındaki tamsayı değer süreç çıkış kodudur.
 | `MEMBER` | `_parse_member` | üye adı token'ı | `[nesne]` |
 | `INDEX` | `_parse_index` | `[` token'ı | `[nesne, indeks]` |
 | `ARRAY` | `_parse_array` / `_parse_tuple_type_expr` | `[` token'ı | `[eleman …]` ya da `[eleman tipi]` |
+| `MAP` | `_parse_map` | `#` token'ı | `[anahtar, değer, …]` (ikişerli) |
 | `IF` | `_parse_if` | `if` token'ı | `[koşul, then, else?]` |
 | `WHILE` | `_parse_while` | `while` token'ı | `[koşul, gövde]` |
 | `FOR` | `_parse_for` | döngü değişkeni token'ı | `[dizi, gövde]` |
@@ -705,7 +747,6 @@ Güncel durum ve öncelikler için depo kökündeki `PROGRESS.md`.
 |---|---------|---------|-----|
 | 2 | Statik tip denetleyicisi | 🟡 Orta | Şu an tüm denetim çalışma zamanında |
 | 3 | `struct` / kayıt tipleri | 🟡 Orta | `MEMBER` düğümü hazır, yalnızca yerleşik metotlara bağlı |
-| 4 | Sözlük / map tipi | 🟡 Orta | `INDEX` düğümü yeniden kullanılabilir |
 | 5 | Opsiyonel tip `T?` | 🟢 Düşük | TypeExpr genişletmesi |
 | 6 | Generic tipler `T<A>` | ⚪ Uzak | TypeExpr büyük genişletme |
 | 7 | Import / modül sistemi | ⚪ Uzak | Şu an tek dosya |
