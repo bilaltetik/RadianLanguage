@@ -67,7 +67,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 
 ### Faz 5 — Kalite / dokümantasyon
 - [x] `Grammer.md` ve `Radian.ebnf` kodla senkron; belge örnekleri testlerde çalışıyor.
-- [~] `PARSER_UPDATE_GUIDE.md` kodla senkron.
+- [x] `PARSER_UPDATE_GUIDE.md` kodla senkron (sürüm 2.0).
 - [x] Kök `README.md` gerçek içerik.
 - [x] `CLAUDE.md` güncel mimariyi anlatıyor.
 
