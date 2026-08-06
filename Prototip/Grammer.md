@@ -529,6 +529,32 @@ assert(c.merkez == Nokta(0, 0));
 assert(Nokta(1, 2) == Nokta(1, 2));
 ```
 
+### Metot çağrısı (UFCS)
+
+İlk parametresi bir değeri alan her fonksiyon, o değer üzerinde metot gibi
+çağrılabilir: **`a.f(x)` ile `f(a, x)` aynı şeydir**. Ayrı bir `impl`/`method`
+sözdizimi yoktur.
+
+```radian
+struct Nokta (x:i32, y:i32);
+
+kare_uzaklik (n:Nokta) -> i32 { n.x * n.x + n.y * n.y; }
+tasi (n:Nokta, dx:i32, dy:i32) -> Nokta { n.x += dx; n.y += dy; n; }
+
+p = Nokta(3, 4);
+assert(p.kare_uzaklik() == 25);        // kare_uzaklik(p) ile aynı
+p.tasi(1, 1);
+assert(p.x == 4);
+
+// Yapılara özgü değil — her tipte çalışır
+ikiyle (x:i32) -> i32 { x * 2; }
+assert((21).ikiyle() == 42);
+```
+
+Üye arama sırası: **alan → yerleşik metot → kapsamdaki fonksiyon**. Yani bir
+alan ile aynı adı taşıyan fonksiyon alanı gölgeleyemez, `[1,2].len()` de her
+zaman yerleşik `len` metodudur.
+
 - Kurucu **konumsaldır**; alan sayısı ve tipleri çağrıda denetlenir.
 - Bilinmeyen alanı okumak/yazmak hatadır; alan adları yinelenemez.
 - Yapılar **referans değerdir**; eşitlik aynı yapı tipi ve alan alan

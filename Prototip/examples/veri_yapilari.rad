@@ -1,6 +1,12 @@
 // Veri yapıları — struct + dizi/harita ile yığın, kuyruk, küme ve
-// öncelikli kuyruk. Yapılar referans değer olduğu için metot benzeri
-// fonksiyonlar nesneyi yerinde değiştirebilir.
+// öncelikli kuyruk.
+//
+// İlk parametresi yapı olan her fonksiyon metot gibi çağrılabilir (UFCS):
+//
+//     yigin_it(y, 5)   ile   y.yigin_it(5)   aynı şeydir
+//
+// Yapılar referans değer olduğu için bu fonksiyonlar nesneyi yerinde
+// değiştirebilir.
 //
 // Çalıştır:  python3 radian.py examples/veri_yapilari.rad
 
@@ -109,27 +115,27 @@ ok_bos_mu (q:OncelikliKuyruk) -> bool { q.oncelikler.len() == 0; }
 dengeli_mi (metin:str) -> bool {
     yigin = yigin_yap();
     for c in metin {
-        if c == "(" { yigin_it(yigin, 1); }
-        else if c == "[" { yigin_it(yigin, 2); }
+        if c == "(" { yigin.yigin_it(1); }
+        else if c == "[" { yigin.yigin_it(2); }
         else if c == ")" {
-            if yigin_bos_mu(yigin) || yigin_cek(yigin) != 1 { return false; }
+            if yigin.yigin_bos_mu() || yigin.yigin_cek() != 1 { return false; }
         }
         else if c == "]" {
-            if yigin_bos_mu(yigin) || yigin_cek(yigin) != 2 { return false; }
+            if yigin.yigin_bos_mu() || yigin.yigin_cek() != 2 { return false; }
         }
     }
-    yigin_bos_mu(yigin);
+    yigin.yigin_bos_mu();
 }
 
 main () -> i32 {
     print("--- yığın (LIFO) ---");
     y = yigin_yap();
-    yigin_it(y, 1);
-    yigin_it(y, 2);
-    yigin_it(y, 3);
-    print("tepe      :", yigin_bak(y));
-    print("çekilen   :", yigin_cek(y), yigin_cek(y));
-    print("kalan     :", y.ogeler);
+    y.yigin_it(1);                       // UFCS: yigin_it(y, 1) ile aynı
+    y.yigin_it(2);
+    y.yigin_it(3);
+    print("tepe      :", y.yigin_bak());
+    print("çekilen   :", y.yigin_cek(), y.yigin_cek());
+    print("kalan     :", y.ogeler);      // alan erişimi metottan önceliklidir
 
     print("");
     print("--- parantez dengesi ---");
@@ -140,9 +146,9 @@ main () -> i32 {
     print("");
     print("--- kuyruk (FIFO) ---");
     k = kuyruk_yap();
-    for x in [10, 20, 30] { kuyruk_ekle(k, x); }
-    print("alınan    :", kuyruk_al(k), kuyruk_al(k));
-    print("kalan     :", kuyruk_uzunluk(k));
+    for x in [10, 20, 30] { k.kuyruk_ekle(x); }
+    print("alınan    :", k.kuyruk_al(), k.kuyruk_al());
+    print("kalan     :", k.kuyruk_uzunluk());
 
     print("");
     print("--- küme ---");
@@ -150,25 +156,25 @@ main () -> i32 {
     b = kume_yap([3, 4, 5]);
     print("a         :", a.uyeler.keys());
     print("b         :", b.uyeler.keys());
-    print("birleşim  :", kume_birlesim(a, b).uyeler.keys());
-    print("kesişim   :", kume_kesisim(a, b).uyeler.keys());
-    print("fark a\\b  :", kume_fark(a, b).uyeler.keys());
-    print("3 var mı  :", kume_var_mi(a, 3));
+    print("birleşim  :", a.kume_birlesim(b).uyeler.keys());
+    print("kesişim   :", a.kume_kesisim(b).uyeler.keys());
+    print("fark a\\b  :", a.kume_fark(b).uyeler.keys());
+    print("3 var mı  :", a.kume_var_mi(3));
 
     print("");
     print("--- öncelikli kuyruk ---");
     q = ok_yap();
-    ok_ekle(q, 3, "düşük");
-    ok_ekle(q, 1, "acil");
-    ok_ekle(q, 2, "orta");
-    while !ok_bos_mu(q) { write(ok_cek(q), " "); }
+    q.ok_ekle(3, "düşük");
+    q.ok_ekle(1, "acil");
+    q.ok_ekle(2, "orta");
+    while !q.ok_bos_mu() { write(q.ok_cek(), " "); }
     print("");
 
     // Doğrulamalar
     assert(dengeli_mi("([])"), "denge denetimi yanlış");
     assert(!dengeli_mi("(]"), "denge yanlış pozitif");
-    assert(kume_boyut(kume_birlesim(a, b)) == 5, "birleşim yanlış");
-    assert(kume_boyut(kume_kesisim(a, b)) == 2, "kesişim yanlış");
+    assert(a.kume_birlesim(b).kume_boyut() == 5, "birleşim yanlış");
+    assert(a.kume_kesisim(b).kume_boyut() == 2, "kesişim yanlış");
     print("");
     print("tüm doğrulamalar geçti");
     0;

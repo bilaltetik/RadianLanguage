@@ -558,9 +558,32 @@ class TestStructs(unittest.TestCase):
     def test_bilinmeyen_alan(self):
         with self.assertRaises(RadianError) as ctx:
             run(self.NOKTA + "Nokta(1, 2).z;")
-        self.assertIn("alanı yok", str(ctx.exception))
+        self.assertIn("alanı ya da metodu yok", str(ctx.exception))
         with self.assertRaises(RadianError):
             run(self.NOKTA + "p = Nokta(1, 2); p.z = 3;")
+
+    def test_ufcs_metot_cagrisi(self):
+        src = (self.NOKTA +
+               "kare_uzaklik (n:Nokta) -> i32 { n.x * n.x + n.y * n.y; } "
+               "Nokta(3, 4).kare_uzaklik();")
+        self.assertEqual(run(src), 25)
+
+    def test_ufcs_ek_arguman_alir(self):
+        src = ("struct Say (n:i32); artir (s:Say, k:i32) -> Say "
+               "{ s.n += k; s; } p = Say(1); p.artir(5); p.n;")
+        self.assertEqual(run(src), 6)
+
+    def test_alan_ufcs_ten_onceliklidir(self):
+        self.assertEqual(run("struct N (x:i32); x (n:N) -> i32 { 99; } N(1).x;"),
+                         1)
+
+    def test_ufcs_diger_tiplerde_de_calisir(self):
+        self.assertEqual(run("ikiyle (x:i32) -> i32 { x * 2; } (21).ikiyle();"), 42)
+        self.assertEqual(run('bas (s:str) -> str { s.upper(); } "ab".bas();'), "AB")
+        self.assertEqual(run("t (xs:[i32]) -> i32 { sum(xs); } [1, 2].t();"), 3)
+
+    def test_yerlesik_metot_ufcs_ten_onceliklidir(self):
+        self.assertEqual(run("len (n:i32) -> i32 { 42; } [1, 2].len();"), 2)
 
     def test_yinelenen_alan_adi(self):
         with self.assertRaises(RadianError) as ctx:

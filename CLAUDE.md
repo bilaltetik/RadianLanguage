@@ -41,7 +41,7 @@ Scripts are meant to be run with `Prototip/` as the working directory
 ```bash
 cd Prototip
 
-python3 run_tests.py              # full suite (~373 tests)
+python3 run_tests.py              # full suite (~381 tests)
 python3 run_tests.py -v           # verbose
 python3 run_tests.py test_parser  # one module
 
@@ -146,6 +146,9 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
   through `call()`; `traceback_text()` renders it and the CLI prints it.
 - Conditions and `&&`/`||`/`!` require real `bool`s — no truthiness.
 - Integer `/` truncates toward zero and `%` follows the dividend's sign (C-style).
+- Member lookup is field → builtin method → function in scope (UFCS): `a.f(x)`
+  binds `a` as the first argument of `f`, producing a `BoundFunction`. There is
+  no separate method-definition syntax.
 - Builtins live in `_BUILTIN_SPECS`; methods in `ARRAY_METHODS` / `MAP_METHODS` /
   `STRING_METHODS` / `NUMBER_METHODS`, reached via `_method_table()`.
 - Radian call depth is counted by the interpreter (`MAX_CALL_DEPTH`), not left

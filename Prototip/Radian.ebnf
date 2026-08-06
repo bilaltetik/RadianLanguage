@@ -208,6 +208,12 @@ Term            = Primary { CallSuffix | MemberSuffix | IndexSuffix }
 
 CallSuffix      = "(" [ ArgumentList ] ")"
 MemberSuffix    = "." T_IDENTIFIER
+
+(*
+  Üye arama sırası: yapı alanı → yerleşik metot → kapsamdaki fonksiyon.
+  Sonuncusu UFCS'tir: `a.f(x)` ile `f(a, x)` aynı çağrıdır; ayrı bir metot
+  tanımlama sözdizimi yoktur.
+*)
 IndexSuffix     = "[" Expression "]"
 
 ArgumentList    = Expression { "," Expression }

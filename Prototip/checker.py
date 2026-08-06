@@ -597,29 +597,56 @@ class Checker:
 
         if is_unknown(obj) or obj.kind == "module":
             return UNKNOWN
+
         if obj.kind == "struct":
             fields = self.structs.get(obj.name)
             if fields is None:
                 return UNKNOWN
             for fname, ftype in fields:
                 if fname == name:
-                    return ftype
+                    return ftype                     # alan önceliklidir
+            bound = self._ufcs(name, obj, scope, node)
+            if bound is not None:
+                return bound
             alanlar = ", ".join(f for f, _ in fields)
             self.error(
-                f"'{obj.name}' yapısının '{name}' alanı yok (alanlar: {alanlar})",
-                node)
+                f"'{obj.name}' yapısının '{name}' alanı ya da metodu yok "
+                f"(alanlar: {alanlar})", node)
             return UNKNOWN
 
         table = {"array": ARRAY_METHODS, "map": MAP_METHODS,
                  "str": STRING_METHODS, "int": NUMBER_METHODS,
                  "float": NUMBER_METHODS}.get(obj.kind)
-        if table is None:
-            self.error(f"{obj} değerinin '{name}' üyesi yok", node)
+        if table is not None and name in table:
+            return self._method_result(obj, name)
+
+        bound = self._ufcs(name, obj, scope, node)
+        if bound is not None:
+            return bound
+
+        self.error(f"{obj} değerinin '{name}' metodu yok", node)
+        return UNKNOWN
+
+    def _ufcs(self, name: str, receiver: Type, scope: Scope,
+              node: Node) -> Type | None:
+        """UFCS: `a.f(x)` → `f(a, x)`. Bağlanabiliyorsa ilk parametresi
+        düşürülmüş fonksiyon tipini döndürür, yoksa None."""
+        candidate = scope.lookup(name)
+        if candidate is None or candidate.kind != "func":
+            return None
+        params = candidate.params
+        if params is None:
+            return func_type()                       # imzası bilinmiyor
+        if not params:
+            return None                              # alıcıyı alacak yer yok
+
+        first_name, first_type = params[0]
+        if not assignable(first_type, receiver):
+            self.error(
+                f"'{name}' fonksiyonunun '{first_name}' parametresi "
+                f"{first_type} ama {receiver} üzerinde çağrılıyor", node)
             return UNKNOWN
-        if name not in table:
-            self.error(f"{obj} değerinin '{name}' metodu yok", node)
-            return UNKNOWN
-        return self._method_result(obj, name)
+        return func_type(params[1:], candidate.ret)
 
     @staticmethod
     def _method_result(obj: Type, name: str) -> Type:

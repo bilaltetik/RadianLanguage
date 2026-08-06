@@ -145,6 +145,26 @@ class BoundMethod:
         return f"<metot {self.builtin.name}>"
 
 
+class BoundFunction:
+    """Bir değere bağlanmış kullanıcı fonksiyonu (UFCS).
+
+    `p.uzaklik(q)` çağrısı `uzaklik(p, q)` demektir: üye erişimi bir alan ya
+    da yerleşik metot bulamazsa, kapsamda aynı adlı fonksiyon aranır ve
+    alıcı ilk argüman olarak bağlanır.
+    """
+
+    def __init__(self, receiver, func: "Function"):
+        self.receiver = receiver
+        self.func     = func
+
+    @property
+    def name(self) -> str:
+        return self.func.name
+
+    def __repr__(self):
+        return f"<bağlı fonksiyon {self.func.name}>"
+
+
 class StructType:
     """Kullanıcı tanımlı kayıt tipi. Adı hem tip hem kurucu fonksiyondur."""
 
@@ -194,7 +214,7 @@ class Module:
         return f"<modül {self.name}>"
 
 
-CALLABLE_TYPES = (Function, Builtin, BoundMethod, StructType)
+CALLABLE_TYPES = (Function, Builtin, BoundMethod, BoundFunction, StructType)
 
 
 # ---------------------------------------------------------------------------
@@ -1050,19 +1070,25 @@ class Interpreter:
                     f"'{obj.name}' modülünde '{name}' tanımı yok", node)
             return obj.values[name]
 
-        if isinstance(obj, StructInstance):
-            if name not in obj.values:
-                raise RadianError(
-                    f"'{obj.name}' yapısının '{name}' alanı yok "
-                    f"(alanlar: {', '.join(obj.struct_type.field_names())})",
-                    node)
-            return obj.values[name]
+        if isinstance(obj, StructInstance) and name in obj.values:
+            return obj.values[name]                  # alan erişimi önceliklidir
 
         table = _method_table(obj)
-        if name not in table:
+        if name in table:
+            return BoundMethod(obj, table[name])
+
+        # UFCS: kapsamda aynı adlı bir fonksiyon varsa alıcıyı ilk argüman yap
+        scope = env.lookup_scope(name)
+        candidate = scope.values[name] if scope else None
+        if isinstance(candidate, Function) and candidate.arity >= 1:
+            return BoundFunction(obj, candidate)
+
+        if isinstance(obj, StructInstance):
             raise RadianError(
-                f"{type_name(obj)} değerinin '{name}' üyesi yok", node)
-        return BoundMethod(obj, table[name])
+                f"'{obj.name}' yapısının '{name}' alanı ya da metodu yok "
+                f"(alanlar: {', '.join(obj.struct_type.field_names())})", node)
+        raise RadianError(
+            f"{type_name(obj)} değerinin '{name}' üyesi yok", node)
 
     # ------------------------------------------------------------------
     # Çağrı
@@ -1078,6 +1104,9 @@ class Interpreter:
         if isinstance(callee, BoundMethod):
             self._check_arity(callee.builtin, len(args), node)
             return callee.builtin.fn(self, callee.receiver, args, node)
+
+        if isinstance(callee, BoundFunction):
+            return self.call(callee.func, [callee.receiver] + args, node)
 
         if isinstance(callee, Builtin):
             self._check_arity(callee, len(args), node)

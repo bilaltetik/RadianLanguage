@@ -134,7 +134,7 @@ class TestDiagnostics(unittest.TestCase):
 
     def test_bilinmeyen_yapi_alani(self):
         self.assertBulgu("struct N (x:i32); p = N(1); p.z;",
-                         "'N' yapısının 'z' alanı yok")
+                         "'N' yapısının 'z' alanı ya da metodu yok")
 
     def test_yapi_alan_atamasi_tipi(self):
         self.assertBulgu('struct N (x:i32); p = N(1); p.x = "a";',
@@ -143,6 +143,20 @@ class TestDiagnostics(unittest.TestCase):
     def test_yapi_kurucu_arite(self):
         self.assertBulgu("struct N (x:i32, y:i32); N(1);",
                          "2 argüman bekliyor, 1 verildi")
+
+    def test_ufcs_metot_cagrisi_temiz(self):
+        self.assertEqual(
+            check("struct N (x:i32); topla (n:N) -> i32 { n.x; } N(1).topla();"),
+            [])
+
+    def test_ufcs_arite_denetlenir(self):
+        self.assertBulgu(
+            "struct N (x:i32); artir (n:N, k:i32) -> N { n; } N(1).artir();",
+            "1 argüman bekliyor, 0 verildi")
+
+    def test_ufcs_alici_tipi_denetlenir(self):
+        self.assertBulgu('f (s:str) -> str { s; } (5).f();',
+                         "'s' parametresi str ama tamsayı üzerinde çağrılıyor")
 
     def test_bilinmeyen_metot(self):
         self.assertBulgu("xs = [1]; xs.yok();", "'yok' metodu yok")

@@ -4,7 +4,7 @@ Bu dosya otonom geliştirme oturumlarının hafızasıdır. Her adım tamamland�
 güncellenir. Durum işaretleri: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamam.
 
 **Güncel durum:** lexer + parser + yorumlayıcı + CLI/REPL çalışıyor.
-`cd Prototip && python3 run_tests.py` → **373 test, tümü yeşil**.
+`cd Prototip && python3 run_tests.py` → **381 test, tümü yeşil**.
 
 ---
 
@@ -92,7 +92,8 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [ ] Opsiyonel tip `T?` ve `unit` tipinin dilde adlandırılması.
 - [ ] Generic tipler `T<A>` (TypeExpr'de büyük genişletme).
 - [ ] `else if` dışında `match` / desen eşleme.
-- [ ] Yapılara metot bağlama (`impl` benzeri) — şu an yalnızca serbest fonksiyon.
+- [x] Yapılara metot çağrısı — UFCS ile (`a.f(x)` ≡ `f(a, x)`), yeni sözdizimi
+      olmadan; denetleyici de bunu biliyor.
 - [ ] Standart kütüphane modülleri (`examples/lib/` yerine gerçek `lib/`).
 - [ ] Bytecode VM / kod üretimi (yorumlayıcı referans gerçekleme olarak kalır).
 
@@ -128,6 +129,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 24 | Yapı eşitliği nominaldir: aynı `StructType` + alan alan karşılaştırma. | Yapı adı bir tip kimliğidir; alanları aynı olan iki farklı yapı eşit değildir. |
 | 25 | `import` bir ifadedir ve modül değeri döndürür; ad alanı `modül.ad` üzerinden gelir. | Bildirim biçimi yeni sözdizimi ve isim çakışması getirirdi; ifade biçimi modülü birinci sınıf değer yapar. |
 | 26 | Modül yolu import eden dosyanın dizinine göre çözülür; modüller gerçek yola göre önbelleğe alınır. | Kütüphane dosyaları komşularını çalışma dizininden bağımsız import edebilsin diye. |
+| 31 | Metotlar ayrı bir `impl` bloğuyla değil, UFCS ile: `a.f(x)` ≡ `f(a, x)`. Arama sırası alan → yerleşik metot → kapsamdaki fonksiyon. | Sıfır yeni sözdizimi; mevcut `MEMBER` + `CALL` düğümleri yeterli. Alan önceliği, bir fonksiyonun alanı gölgelemesini engeller. |
 | 29 | Statik denetleyici ayrı bir dosya (`checker.py`) ve **isteğe bağlı** (`--check`); çalışma zamanı denetimleri kaldırılmadı. | Yorumlayıcıyı sadeleştirmeden ikinci bir güvenlik ağı eklemek; denetleyici olgunlaşana kadar çalışan programları kırmamak. |
 | 30 | Denetleyici emin olmadığında `UNKNOWN` döner ve susar; tamsayı genişlikleri statik katmanda ayrıştırılmaz. | "Bildirilen her bulgu gerçek hatadır" sözleşmesi; aralık denetimi zaten çalışma zamanında var. |
 | 28 | Bir statement blokla biten bir yapıyla başlıyorsa orada biter; operatör zinciri sürdürülmez (Rust'taki kural). | `while … { }` satırından sonra gelen `-1;` ifadesi sessizce `(while …) - 1` olarak okunuyordu — `examples/algoritmalar.rad` yazarken yakalandı. |

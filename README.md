@@ -46,6 +46,7 @@ python3 run_tests.py                       # tüm testler
 | Operatörler | 11 öncelik katmanı, `**` sağ-çağrışımlı, bileşik atamalar (`+=`, `<<=`, …), `++`/`--` |
 | Akış denetimi | `if`/`else if`/`else`, `while`, `for … in`, `break`, `continue`, `return` |
 | Fonksiyonlar | özyineleme, closure, yüksek mertebeden fonksiyonlar, currying |
+| Metotlar | UFCS: `p.uzaklik(q)` ≡ `uzaklik(p, q)` — ayrı `impl` sözdizimi yok |
 | Veri işleme | dizi/harita/string metotları: `map` `filter` `reduce` `sort` `split` `join` `keys` … |
 | Modüller | `import "lib/geometri.rad"` — bir ifadedir, modül değeri döndürür |
 | Statik denetim | `--check`: tanımsız ad, arite, argüman/dönüş tipi, koşul tipi … |
