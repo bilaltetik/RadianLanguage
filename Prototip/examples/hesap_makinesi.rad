@@ -1,0 +1,207 @@
+// Radian ile yazılmış küçük bir ifade yorumlayıcısı.
+//
+// Radian'ın kendisi gibi çalışır: lexer → recursive-descent parser →
+// değerlendirme. Desteklenenler:
+//
+//     sayılar, + - * / %, üs (^), parantez, tekli eksi,
+//     değişkenler ve atama:  "x = 3 * (2 + 1)"
+//
+// Çalıştır:  python3 radian.py examples/hesap_makinesi.rad
+
+// ---------------------------------------------------------------- lexer
+
+rakam_mi (c:char) -> bool { ord(c) >= ord('0') && ord(c) <= ord('9'); }
+
+harf_mi (c:char) -> bool {
+    k = ord(c);
+    (k >= ord('a') && k <= ord('z')) || (k >= ord('A') && k <= ord('Z')) || c == "_";
+}
+
+// "12 + x*3" → ["12", "+", "x", "*", "3"]
+tokenle (metin:str) -> [str] {
+    tokenler = [];
+    i = 0;
+    while i < metin.len() {
+        c = metin[i];
+
+        if c == " " {
+            i++;
+            continue;
+        }
+
+        if rakam_mi(c) {
+            sayi = "";
+            while i < metin.len() && (rakam_mi(metin[i]) || metin[i] == ".") {
+                sayi += metin[i];
+                i++;
+            }
+            tokenler.push(sayi);
+            continue;
+        }
+
+        if harf_mi(c) {
+            ad = "";
+            while i < metin.len() && (harf_mi(metin[i]) || rakam_mi(metin[i])) {
+                ad += metin[i];
+                i++;
+            }
+            tokenler.push(ad);
+            continue;
+        }
+
+        tokenler.push(c);                    // tek karakterli sembol
+        i++;
+    }
+    tokenler;
+}
+
+// ---------------------------------------------------------------- parser durumu
+
+struct Durum (tokenler:[str], konum:i32, degiskenler:map);
+
+durum_yap (metin:str, degiskenler:map) -> Durum {
+    Durum(tokenle(metin), 0, degiskenler);
+}
+
+bak (d:Durum) -> str {
+    if d.konum >= d.tokenler.len() { ""; } else { d.tokenler[d.konum]; }
+}
+
+ilerle (d:Durum) -> str {
+    token = d.bak();
+    d.konum += 1;
+    token;
+}
+
+esles (d:Durum, beklenen:str) -> bool {
+    if d.bak() == beklenen {
+        d.ilerle();
+        true;
+    } else {
+        false;
+    }
+}
+
+// ---------------------------------------------------------------- gramer
+//
+//   ifade  = terim { ("+" | "-") terim }
+//   terim  = us { ("*" | "/" | "%") us }
+//   us     = carpan [ "^" us ]                (sağ-çağrışımlı)
+//   carpan = "-" carpan | "(" ifade ")" | sayı | ad
+
+ifade (d:Durum) -> f64 {
+    sonuc = d.terim();
+    while d.bak() == "+" || d.bak() == "-" {
+        op = d.ilerle();
+        sag = d.terim();
+        if op == "+" { sonuc += sag; } else { sonuc -= sag; }
+    }
+    sonuc;
+}
+
+terim (d:Durum) -> f64 {
+    sonuc = d.us();
+    while d.bak() == "*" || d.bak() == "/" || d.bak() == "%" {
+        op = d.ilerle();
+        sag = d.us();
+        if op == "*" {
+            sonuc *= sag;
+        } else if op == "/" {
+            assert(sag != 0.0, "sıfıra bölme");
+            sonuc /= sag;
+        } else {
+            assert(sag != 0.0, "sıfıra bölme");
+            sonuc = sonuc % sag;
+        }
+    }
+    sonuc;
+}
+
+us (d:Durum) -> f64 {
+    taban = d.carpan();
+    if d.esles("^") {
+        return taban ** d.us();              // sağ-çağrışımlı
+    }
+    taban;
+}
+
+carpan (d:Durum) -> f64 {
+    if d.esles("-") { return -d.carpan(); }
+
+    if d.esles("(") {
+        deger = d.ifade();
+        assert(d.esles(")"), "kapanmamış parantez");
+        return deger;
+    }
+
+    token = d.ilerle();
+    assert(token != "", "beklenmedik ifade sonu");
+
+    if rakam_mi(token[0]) { return float(token); }
+
+    assert(d.degiskenler.has(token), "tanımsız değişken: " + token);
+    d.degiskenler[token];
+}
+
+// ---------------------------------------------------------------- üst katman
+
+// "x = 1 + 2" biçimindeki atamayı da destekler; değeri döndürür.
+hesapla (metin:str, degiskenler:map) -> f64 {
+    tokenler = tokenle(metin);
+    if tokenler.len() > 1 && tokenler[1] == "=" && harf_mi(tokenler[0][0]) {
+        ad = tokenler[0];
+        d  = durum_yap(metin.slice(metin.find("=") + 1), degiskenler);
+        deger = d.ifade();
+        degiskenler[ad] = deger;
+        return deger;
+    }
+
+    d = durum_yap(metin, degiskenler);
+    sonuc = d.ifade();
+    assert(d.bak() == "", "beklenmedik token: " + d.bak());
+    sonuc;
+}
+
+goster (metin:str, degiskenler:map) -> f64 {
+    sonuc = hesapla(metin, degiskenler);
+    bosluk = "";
+    if metin.len() < 24 { bosluk = " ".repeat(24 - metin.len()); }
+    print("  " + metin + bosluk + " = " + str(sonuc));
+    sonuc;
+}
+
+main () -> i32 {
+    print("Radian ile yazılmış ifade yorumlayıcısı");
+    print("");
+
+    ortam = #[];
+
+    print("aritmetik:");
+    goster("1 + 2 * 3", ortam);
+    goster("(1 + 2) * 3", ortam);
+    goster("10 / 4", ortam);
+    goster("10 % 3", ortam);
+    goster("-3 + 5", ortam);
+    goster("2 ^ 3 ^ 2", ortam);              // sağ-çağrışımlı → 512
+
+    print("");
+    print("değişkenler:");
+    goster("x = 4", ortam);
+    goster("y = x * 2 + 1", ortam);
+    goster("(x + y) / 3", ortam);
+
+    print("");
+    print("ortam:", ortam);
+
+    // Doğrulamalar — öncelik ve çağrışım kuralları
+    assert(hesapla("1 + 2 * 3", ortam) == 7.0, "öncelik yanlış");
+    assert(hesapla("(1 + 2) * 3", ortam) == 9.0, "parantez yanlış");
+    assert(hesapla("2 ^ 3 ^ 2", ortam) == 512.0, "üs sağ-çağrışımlı olmalı");
+    assert(hesapla("-2 ^ 2", ortam) == 4.0, "tekli eksi yanlış");
+    assert(hesapla("10 % 3", ortam) == 1.0, "mod yanlış");
+    assert(ortam["y"] == 9.0, "değişken ataması yanlış");
+
+    print("");
+    print("tüm doğrulamalar geçti");
+    0;
+}

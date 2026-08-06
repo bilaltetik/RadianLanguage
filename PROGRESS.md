@@ -4,7 +4,7 @@ Bu dosya otonom geliştirme oturumlarının hafızasıdır. Her adım tamamland�
 güncellenir. Durum işaretleri: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamam.
 
 **Güncel durum:** lexer + parser + yorumlayıcı + CLI/REPL çalışıyor.
-`cd Prototip && python3 run_tests.py` → **381 test, tümü yeşil**.
+`cd Prototip && python3 run_tests.py` → **382 test, tümü yeşil**.
 
 ---
 
@@ -81,8 +81,9 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] `ord` / `chr` yerleşikleri.
 - [x] Deyim başındaki blok-kuyruklu yapı hatası düzeltildi (aşağıdaki karar 28).
 - [x] Daha fazla örnek script: `algoritmalar`, `metin_isleme`, `veri_yapilari`,
-      `oyun_hayat`, `matris` + `lib/liste.rad` (14 örnek, hepsi kendi kendini
-      `assert` ile doğruluyor ve testlerde koşuluyor).
+      `oyun_hayat`, `matris`, `hesap_makinesi` + `lib/liste.rad` (15 örnek,
+      hepsi kendi kendini `assert` ile doğruluyor, testlerde koşuluyor ve
+      `--check` denetiminden temiz geçiyor).
 - [x] **Statik tip denetleyicisi** (`checker.py`, `radian.py --check`):
       tanımsız ad, arite, argüman/dönüş tipi, koşul tipi, yapı alanları,
       operatör tipleri, indeksleme, metot adı. Yanlış alarm vermemesi

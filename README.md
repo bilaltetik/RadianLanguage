@@ -95,6 +95,7 @@ koşusunda uçtan uca çalıştırılır:
 | `veri_yapilari.rad` | Yığın, kuyruk, küme, öncelikli kuyruk |
 | `oyun_hayat.rad` | Conway'in Yaşam Oyunu — iç içe diziler |
 | `matris.rad` | Matris toplama/çarpma/devrik, modül kullanımı |
+| `hesap_makinesi.rad` | **Radian ile yazılmış ifade yorumlayıcısı** — lexer + recursive-descent parser + değerlendirme |
 
 ```bash
 python3 radian.py examples/oyun_hayat.rad
