@@ -160,8 +160,24 @@ Sırasıyla yapılanlar (her adım sonunda testler yeşil bırakıldı):
 11. Modül sistemi (`import`) — 323 test.
 12. Çalışma zamanı hatalarında çağrı yığını — 327 test.
 
-**Sonraki oturum buradan devam etsin:** Faz 7'nin ilk maddesi (statik tip
-denetleyicisi). Öneri: `checker.py` içinde AST üzerinde ayrı bir geçiş; önce
-yalnızca *bildirilmiş* tipleri denetle (değişken, parametre, dönüş), çıkarım
-(inference) ikinci adımda. Çalışma zamanı denetimleri kaldırılmamalı — ikisi
-birbirini tamamlar.
+### Oturum 2 (2026-08-06)
+
+13. `ord` / `chr` yerleşikleri (metin örnekleri için gerekliydi).
+14. **Bug:** deyim başındaki blok-kuyruklu yapı sonraki satırı yutuyordu
+    (`while … { }` + `-1;` → `(while …) - 1`). Örnek yazarken yakalandı,
+    düzeltildi (karar 28) — 337 test.
+15. Beş yeni örnek + `lib/liste.rad` modülü — 341 test.
+16. **Statik denetleyici** (`checker.py`, `--check`): tanımsız ad, arite,
+    argüman/dönüş tipi, koşul tipi, yapı alanları, operatör tipleri,
+    indeksleme, metot adı. Yanlış alarm vermemesi tüm örneklerle
+    doğrulanıyor — 373 test.
+17. **UFCS metot çağrısı** (`a.f(x)` ≡ `f(a, x)`), denetleyici desteğiyle;
+    `veri_yapilari.rad` metot biçimine geçirildi — 381 test.
+18. `hesap_makinesi.rad`: Radian ile yazılmış ifade yorumlayıcısı — 382 test.
+
+**Sonraki oturum buradan devam etsin:** Faz 7'de kalan ilk madde —
+denetleyiciyi varsayılan hale getirmek. Öneri: `radian.py dosya.rad` önce
+`--check` çalıştırsın, bulgu varsa çalıştırmadan çıksın; kaçış için
+`--no-check`. Bunu yapmadan önce denetleyiciyi daha çok gerçek programla
+sınamak iyi olur (yanlış alarm sözleşmesi kritik). Sonraki adaylar: opsiyonel
+tip `T?`, `match` deyimi, gerçek bir standart kütüphane dizini.
