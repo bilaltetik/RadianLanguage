@@ -71,6 +71,32 @@ etiket = if r > 2 { "büyük"; } else { "küçük"; };
 assert(etiket == "büyük");
 ```
 
+## Örnek programlar
+
+`examples/` altındaki her program kendi kendini doğrular (`assert`) ve test
+koşusunda uçtan uca çalıştırılır:
+
+| Dosya | Ne gösteriyor |
+|-------|---------------|
+| `hello.rad` | En küçük program, `main` |
+| `fizzbuzz.rad` | `if`/`else if` zinciri, `str()` |
+| `fibonacci.rad` | Özyineleme vs. döngü, `assert` ile karşılaştırma |
+| `tipler.rad` | Tip bağlama, sıfır değerleri, fonksiyon tipleri |
+| `diziler.rad` | Dizi/string metotları, `map`/`filter`/`reduce` |
+| `closure.rad` | Kapanışlar, fonksiyon döndüren fonksiyon |
+| `haritalar.rad` | `#[k: v]` haritaları, kelime sayacı |
+| `yapilar.rad` | `struct`, iç içe kayıtlar, referans semantiği |
+| `moduller.rad` | `import`, `lib/geometri.rad` modülü |
+| `algoritmalar.rad` | obeb/okek, kalbur, sıralama, ikili arama, Hanoi |
+| `metin_isleme.rad` | Palindrom, Sezar şifresi, kelime/harf istatistiği |
+| `veri_yapilari.rad` | Yığın, kuyruk, küme, öncelikli kuyruk |
+| `oyun_hayat.rad` | Conway'in Yaşam Oyunu — iç içe diziler |
+| `matris.rad` | Matris toplama/çarpma/devrik, modül kullanımı |
+
+```bash
+python3 radian.py examples/oyun_hayat.rad
+```
+
 ## Depo düzeni
 
 ```

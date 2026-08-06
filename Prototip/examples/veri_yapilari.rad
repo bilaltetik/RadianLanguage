@@ -1,0 +1,175 @@
+// Veri yapıları — struct + dizi/harita ile yığın, kuyruk, küme ve
+// öncelikli kuyruk. Yapılar referans değer olduğu için metot benzeri
+// fonksiyonlar nesneyi yerinde değiştirebilir.
+//
+// Çalıştır:  python3 radian.py examples/veri_yapilari.rad
+
+// ---------------------------------------------------------------- yığın (LIFO)
+
+struct Yigin (ogeler:[i32]);
+
+yigin_yap () -> Yigin { Yigin([]); }
+
+yigin_it (y:Yigin, deger:i32) -> Yigin {
+    y.ogeler.push(deger);
+    y;
+}
+
+yigin_cek (y:Yigin) -> i32 { y.ogeler.pop(); }
+
+yigin_bak (y:Yigin) -> i32 { y.ogeler[y.ogeler.len() - 1]; }
+
+yigin_bos_mu (y:Yigin) -> bool { y.ogeler.len() == 0; }
+
+// ---------------------------------------------------------------- kuyruk (FIFO)
+
+struct Kuyruk (ogeler:[i32]);
+
+kuyruk_yap () -> Kuyruk { Kuyruk([]); }
+
+kuyruk_ekle (k:Kuyruk, deger:i32) -> Kuyruk {
+    k.ogeler.push(deger);
+    k;
+}
+
+kuyruk_al (k:Kuyruk) -> i32 { k.ogeler.remove(0); }
+
+kuyruk_uzunluk (k:Kuyruk) -> i32 { k.ogeler.len(); }
+
+// ---------------------------------------------------------------- küme
+
+struct Kume (uyeler:map);
+
+kume_yap (baslangic:[i32]) -> Kume {
+    k = Kume(#[]);
+    for x in baslangic { k.uyeler[x] = true; }
+    k;
+}
+
+kume_ekle (k:Kume, x:i32) -> Kume { k.uyeler[x] = true; k; }
+
+kume_var_mi (k:Kume, x:i32) -> bool { k.uyeler.has(x); }
+
+kume_boyut (k:Kume) -> i32 { k.uyeler.len(); }
+
+kume_birlesim (a:Kume, b:Kume) -> Kume {
+    sonuc = kume_yap(a.uyeler.keys());
+    for x in b.uyeler { kume_ekle(sonuc, x); }
+    sonuc;
+}
+
+kume_kesisim (a:Kume, b:Kume) -> Kume {
+    sonuc = kume_yap([]);
+    for x in a.uyeler {
+        if kume_var_mi(b, x) { kume_ekle(sonuc, x); }
+    }
+    sonuc;
+}
+
+kume_fark (a:Kume, b:Kume) -> Kume {
+    sonuc = kume_yap([]);
+    for x in a.uyeler {
+        if !kume_var_mi(b, x) { kume_ekle(sonuc, x); }
+    }
+    sonuc;
+}
+
+// ---------------------------------------------------------------- öncelikli kuyruk
+
+// Basit gerçekleme: ekleme O(n), en küçüğü çekme O(1)
+struct OncelikliKuyruk (oncelikler:[i32], degerler:[str]);
+
+ok_yap () -> OncelikliKuyruk { OncelikliKuyruk([], []); }
+
+ok_ekle (q:OncelikliKuyruk, oncelik:i32, deger:str) -> OncelikliKuyruk {
+    yer = q.oncelikler.len();
+    i = 0;
+    while i < q.oncelikler.len() {
+        if q.oncelikler[i] > oncelik {
+            yer = i;
+            break;
+        }
+        i++;
+    }
+    q.oncelikler.insert(yer, oncelik);
+    q.degerler.insert(yer, deger);
+    q;
+}
+
+ok_cek (q:OncelikliKuyruk) -> str {
+    q.oncelikler.remove(0);
+    q.degerler.remove(0);
+}
+
+ok_bos_mu (q:OncelikliKuyruk) -> bool { q.oncelikler.len() == 0; }
+
+// ---------------------------------------------------------------- kullanım
+
+// Yığın kullanan gerçek bir iş: parantez dengesi denetimi
+dengeli_mi (metin:str) -> bool {
+    yigin = yigin_yap();
+    for c in metin {
+        if c == "(" { yigin_it(yigin, 1); }
+        else if c == "[" { yigin_it(yigin, 2); }
+        else if c == ")" {
+            if yigin_bos_mu(yigin) || yigin_cek(yigin) != 1 { return false; }
+        }
+        else if c == "]" {
+            if yigin_bos_mu(yigin) || yigin_cek(yigin) != 2 { return false; }
+        }
+    }
+    yigin_bos_mu(yigin);
+}
+
+main () -> i32 {
+    print("--- yığın (LIFO) ---");
+    y = yigin_yap();
+    yigin_it(y, 1);
+    yigin_it(y, 2);
+    yigin_it(y, 3);
+    print("tepe      :", yigin_bak(y));
+    print("çekilen   :", yigin_cek(y), yigin_cek(y));
+    print("kalan     :", y.ogeler);
+
+    print("");
+    print("--- parantez dengesi ---");
+    for aday in ["([])", "(]", "((", "a(b[c]d)e"] {
+        print(aday, "→", dengeli_mi(aday));
+    }
+
+    print("");
+    print("--- kuyruk (FIFO) ---");
+    k = kuyruk_yap();
+    for x in [10, 20, 30] { kuyruk_ekle(k, x); }
+    print("alınan    :", kuyruk_al(k), kuyruk_al(k));
+    print("kalan     :", kuyruk_uzunluk(k));
+
+    print("");
+    print("--- küme ---");
+    a = kume_yap([1, 2, 3, 4]);
+    b = kume_yap([3, 4, 5]);
+    print("a         :", a.uyeler.keys());
+    print("b         :", b.uyeler.keys());
+    print("birleşim  :", kume_birlesim(a, b).uyeler.keys());
+    print("kesişim   :", kume_kesisim(a, b).uyeler.keys());
+    print("fark a\\b  :", kume_fark(a, b).uyeler.keys());
+    print("3 var mı  :", kume_var_mi(a, 3));
+
+    print("");
+    print("--- öncelikli kuyruk ---");
+    q = ok_yap();
+    ok_ekle(q, 3, "düşük");
+    ok_ekle(q, 1, "acil");
+    ok_ekle(q, 2, "orta");
+    while !ok_bos_mu(q) { write(ok_cek(q), " "); }
+    print("");
+
+    // Doğrulamalar
+    assert(dengeli_mi("([])"), "denge denetimi yanlış");
+    assert(!dengeli_mi("(]"), "denge yanlış pozitif");
+    assert(kume_boyut(kume_birlesim(a, b)) == 5, "birleşim yanlış");
+    assert(kume_boyut(kume_kesisim(a, b)) == 2, "kesişim yanlış");
+    print("");
+    print("tüm doğrulamalar geçti");
+    0;
+}

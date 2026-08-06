@@ -1,0 +1,161 @@
+// Matris işlemleri — iç içe diziler (`[[f64]]`) ve tip bağlama.
+//
+// Çalıştır:  python3 radian.py examples/matris.rad
+
+liste = import "lib/liste.rad";
+
+// ---------------------------------------------------------------- kurma
+
+sifir (satir:i32, sutun:i32) -> [[f64]] {
+    m = [];
+    y = 0;
+    while y < satir {
+        s = [];
+        x = 0;
+        while x < sutun { s.push(0.0); x++; }
+        m.push(s);
+        y++;
+    }
+    m;
+}
+
+birim (n:i32) -> [[f64]] {
+    m = sifir(n, n);
+    i = 0;
+    while i < n { m[i][i] = 1.0; i++; }
+    m;
+}
+
+satir_sayisi (m:[[f64]]) -> i32 { m.len(); }
+sutun_sayisi (m:[[f64]]) -> i32 { if m.len() == 0 { 0; } else { m[0].len(); } }
+
+// ---------------------------------------------------------------- işlemler
+
+topla (a:[[f64]], b:[[f64]]) -> [[f64]] {
+    assert(satir_sayisi(a) == satir_sayisi(b), "toplama: satır sayıları farklı");
+    assert(sutun_sayisi(a) == sutun_sayisi(b), "toplama: sütun sayıları farklı");
+
+    sonuc = sifir(satir_sayisi(a), sutun_sayisi(a));
+    y = 0;
+    while y < satir_sayisi(a) {
+        x = 0;
+        while x < sutun_sayisi(a) {
+            sonuc[y][x] = a[y][x] + b[y][x];
+            x++;
+        }
+        y++;
+    }
+    sonuc;
+}
+
+skaler_carp (m:[[f64]], k:f64) -> [[f64]] {
+    sonuc = sifir(satir_sayisi(m), sutun_sayisi(m));
+    y = 0;
+    while y < satir_sayisi(m) {
+        x = 0;
+        while x < sutun_sayisi(m) {
+            sonuc[y][x] = m[y][x] * k;
+            x++;
+        }
+        y++;
+    }
+    sonuc;
+}
+
+carp (a:[[f64]], b:[[f64]]) -> [[f64]] {
+    assert(sutun_sayisi(a) == satir_sayisi(b), "çarpma: boyutlar uyumsuz");
+
+    sonuc = sifir(satir_sayisi(a), sutun_sayisi(b));
+    y = 0;
+    while y < satir_sayisi(a) {
+        x = 0;
+        while x < sutun_sayisi(b) {
+            toplam = 0.0;
+            k = 0;
+            while k < sutun_sayisi(a) {
+                toplam += a[y][k] * b[k][x];
+                k++;
+            }
+            sonuc[y][x] = toplam;
+            x++;
+        }
+        y++;
+    }
+    sonuc;
+}
+
+devrik (m:[[f64]]) -> [[f64]] {
+    sonuc = sifir(sutun_sayisi(m), satir_sayisi(m));
+    y = 0;
+    while y < satir_sayisi(m) {
+        x = 0;
+        while x < sutun_sayisi(m) {
+            sonuc[x][y] = m[y][x];
+            x++;
+        }
+        y++;
+    }
+    sonuc;
+}
+
+// 2x2 determinant ve iz (trace)
+determinant2 (m:[[f64]]) -> f64 { m[0][0] * m[1][1] - m[0][1] * m[1][0]; }
+
+iz (m:[[f64]]) -> f64 {
+    toplam = 0.0;
+    i = 0;
+    while i < satir_sayisi(m) { toplam += m[i][i]; i++; }
+    toplam;
+}
+
+// ---------------------------------------------------------------- gösterim
+
+yaz (m:[[f64]], baslik:str) -> i32 {
+    print(baslik);
+    for satir in m {
+        parcalar = [];
+        for deger in satir { parcalar.push(str(deger)); }
+        print("  [ " + parcalar.join("  ") + " ]");
+    }
+    0;
+}
+
+main () -> i32 {
+    a : [[f64]] = [[1.0, 2.0],
+                   [3.0, 4.0]];
+    b : [[f64]] = [[0.0, 1.0],
+                   [1.0, 0.0]];
+
+    yaz(a, "A =");
+    yaz(b, "B =");
+    yaz(topla(a, b), "A + B =");
+    yaz(carp(a, b), "A × B =");
+    yaz(devrik(a), "Aᵀ =");
+    yaz(skaler_carp(a, 2.0), "2A =");
+    yaz(birim(3), "I₃ =");
+
+    print("");
+    print("det(A) :", determinant2(a));
+    print("iz(A)  :", iz(a));
+
+    // 2x3 × 3x2 → 2x2
+    c : [[f64]] = [[1.0, 2.0, 3.0],
+                   [4.0, 5.0, 6.0]];
+    yaz(carp(c, devrik(c)), "C × Cᵀ =");
+
+    // Modül kullanımı: satır ortalamaları
+    print("");
+    ortalamalar = [];
+    for satir in a { ortalamalar.push(liste.ortalama(satir)); }
+    print("satır ortalamaları :", ortalamalar);
+    print("en büyük satır     :", liste.en_buyuk_indeks(ortalamalar));
+
+    // Doğrulamalar
+    assert(carp(a, birim(2)) == a, "A × I ≠ A");
+    assert(devrik(devrik(a)) == a, "iki kez devrik başa dönmeli");
+    assert(determinant2(a) == -2.0, "determinant yanlış");
+    assert(iz(a) == 5.0, "iz yanlış");
+    print("");
+    print("tüm doğrulamalar geçti");
+    0;
+}

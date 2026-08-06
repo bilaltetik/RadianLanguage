@@ -1,0 +1,126 @@
+// Conway'in Yaşam Oyunu — iç içe diziler, komşu sayımı, nesil üretimi.
+//
+// Kurallar:
+//   - 2 ya da 3 canlı komşusu olan canlı hücre yaşar
+//   - tam 3 canlı komşusu olan ölü hücre canlanır
+//   - diğer tüm hücreler ölür
+//
+// Çalıştır:  python3 radian.py examples/oyun_hayat.rad
+
+CANLI = 1;
+OLU   = 0;
+
+// satir x sutun boyutunda boş ızgara
+izgara_yap (satir:i32, sutun:i32) -> [[i32]] {
+    izgara = [];
+    y = 0;
+    while y < satir {
+        satirlar = [];
+        x = 0;
+        while x < sutun {
+            satirlar.push(OLU);
+            x++;
+        }
+        izgara.push(satirlar);
+        y++;
+    }
+    izgara;
+}
+
+// [[y, x], …] koordinatlarını canlandırır
+tohumla (izgara:[[i32]], noktalar:[[i32]]) -> [[i32]] {
+    for nokta in noktalar {
+        izgara[nokta[0]][nokta[1]] = CANLI;
+    }
+    izgara;
+}
+
+// Kenarlar sarmalanmaz: ızgara dışı hücreler ölü sayılır
+komsu_say (izgara:[[i32]], y:i32, x:i32) -> i32 {
+    satir_sayisi = izgara.len();
+    sutun_sayisi = izgara[0].len();
+    toplam = 0;
+
+    dy = -1;
+    while dy <= 1 {
+        dx = -1;
+        while dx <= 1 {
+            if !(dy == 0 && dx == 0) {
+                ky = y + dy;
+                kx = x + dx;
+                if ky >= 0 && ky < satir_sayisi && kx >= 0 && kx < sutun_sayisi {
+                    toplam += izgara[ky][kx];
+                }
+            }
+            dx++;
+        }
+        dy++;
+    }
+    toplam;
+}
+
+// Bir sonraki nesli üretir (girdiyi değiştirmez)
+sonraki_nesil (izgara:[[i32]]) -> [[i32]] {
+    yeni = izgara_yap(izgara.len(), izgara[0].len());
+    y = 0;
+    while y < izgara.len() {
+        x = 0;
+        while x < izgara[0].len() {
+            komsu = komsu_say(izgara, y, x);
+            canli = izgara[y][x] == CANLI;
+            if canli && (komsu == 2 || komsu == 3) {
+                yeni[y][x] = CANLI;
+            } else if !canli && komsu == 3 {
+                yeni[y][x] = CANLI;
+            }
+            x++;
+        }
+        y++;
+    }
+    yeni;
+}
+
+canli_sayisi (izgara:[[i32]]) -> i32 {
+    toplam = 0;
+    for satir in izgara { toplam += sum(satir); }
+    toplam;
+}
+
+ciz (izgara:[[i32]], baslik:str) -> i32 {
+    print(baslik);
+    for satir in izgara {
+        cizgi = "";
+        for hucre in satir {
+            cizgi += if hucre == CANLI { "#"; } else { "."; };
+        }
+        print("  " + cizgi);
+    }
+    print("");
+    0;
+}
+
+main () -> i32 {
+    // Planör (glider) — ızgarada ilerleyen klasik desen
+    izgara = tohumla(izgara_yap(8, 8), [[0, 1], [1, 2], [2, 0], [2, 1], [2, 2]]);
+
+    ciz(izgara, "nesil 0 — planör");
+    nesil = 1;
+    while nesil <= 4 {
+        izgara = sonraki_nesil(izgara);
+        ciz(izgara, "nesil " + str(nesil) + " — canlı: " + str(canli_sayisi(izgara)));
+        nesil++;
+    }
+
+    // Blinker (osilatör) iki nesilde başa döner
+    blinker = tohumla(izgara_yap(5, 5), [[2, 1], [2, 2], [2, 3]]);
+    bir_sonraki = sonraki_nesil(blinker);
+    iki_sonraki = sonraki_nesil(bir_sonraki);
+
+    ciz(blinker, "blinker — nesil 0");
+    ciz(bir_sonraki, "blinker — nesil 1");
+
+    assert(blinker == iki_sonraki, "blinker 2 nesilde başa dönmeliydi");
+    assert(canli_sayisi(izgara) == 5, "planör 5 hücre kalmalıydı");
+    print("tüm doğrulamalar geçti");
+    0;
+}

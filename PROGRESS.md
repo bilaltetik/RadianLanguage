@@ -4,7 +4,7 @@ Bu dosya otonom geliştirme oturumlarının hafızasıdır. Her adım tamamland�
 güncellenir. Durum işaretleri: `[ ]` yapılacak · `[~]` devam ediyor · `[x]` tamam.
 
 **Güncel durum:** lexer + parser + yorumlayıcı + CLI/REPL çalışıyor.
-`cd Prototip && python3 run_tests.py` → **327 test, tümü yeşil**.
+`cd Prototip && python3 run_tests.py` → **341 test, tümü yeşil**.
 
 ---
 
@@ -80,7 +80,9 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 ### Faz 7 — Örnekler ve sonraki adımlar
 - [x] `ord` / `chr` yerleşikleri.
 - [x] Deyim başındaki blok-kuyruklu yapı hatası düzeltildi (aşağıdaki karar 28).
-- [~] Daha fazla örnek script (`examples/`).
+- [x] Daha fazla örnek script: `algoritmalar`, `metin_isleme`, `veri_yapilari`,
+      `oyun_hayat`, `matris` + `lib/liste.rad` (14 örnek, hepsi kendi kendini
+      `assert` ile doğruluyor ve testlerde koşuluyor).
 - [ ] **Statik tip denetleyicisi** — parse sonrası ayrı geçiş; şu an tüm denetim
       çalışma zamanında. En büyük ve en değerli sonraki adım.
 - [ ] Opsiyonel tip `T?` ve `unit` tipinin dilde adlandırılması.

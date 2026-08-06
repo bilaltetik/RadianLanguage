@@ -1,0 +1,161 @@
+// Metin işleme — string metotları, karakter kodları, haritalar.
+//
+// Çalıştır:  python3 radian.py examples/metin_isleme.rad
+
+// ---------------------------------------------------------------- yardımcılar
+
+harf_mi (c:char) -> bool {
+    k = ord(c);
+    (k >= ord('a') && k <= ord('z')) || (k >= ord('A') && k <= ord('Z'));
+}
+
+ters_cevir (s:str) -> str {
+    sonuc = "";
+    for c in s { sonuc = c + sonuc; }
+    sonuc;
+}
+
+// Yalnızca harfleri tutar, küçük harfe indirir
+sadelestir (s:str) -> str {
+    sonuc = "";
+    for c in s.lower() {
+        if harf_mi(c) { sonuc += c; }
+    }
+    sonuc;
+}
+
+palindrom_mu (s:str) -> bool {
+    sade = sadelestir(s);
+    sade == ters_cevir(sade);
+}
+
+// ---------------------------------------------------------------- şifreleme
+
+// Sezar şifresi — yalnızca ASCII harfleri kaydırır
+sezar (metin:str, kaydir:i32) -> str {
+    sonuc = "";
+    for c in metin {
+        if !harf_mi(c) {
+            sonuc += c;
+            continue;
+        }
+        taban = if ord(c) >= ord('a') { ord('a'); } else { ord('A'); };
+        yeni  = (ord(c) - taban + kaydir) % 26;
+        if yeni < 0 { yeni += 26; }
+        sonuc += chr(taban + yeni);
+    }
+    sonuc;
+}
+
+// ---------------------------------------------------------------- istatistik
+
+kelime_sayaci (metin:str) -> map {
+    sayim = #[];
+    for kelime in sadelestir_kelimeler(metin) {
+        sayim[kelime] = sayim.get(kelime, 0) + 1;
+    }
+    sayim;
+}
+
+sadelestir_kelimeler (metin:str) -> [str] {
+    kelimeler = [];
+    for ham in metin.lower().split(" ") {
+        temiz = sadelestir(ham);
+        if temiz.len() > 0 { kelimeler.push(temiz); }
+    }
+    kelimeler;
+}
+
+// Haritadaki en yüksek değerli anahtar
+en_sik (sayim:map) -> str {
+    en_iyi = "";
+    en_cok = 0;
+    for kelime in sayim {
+        if sayim[kelime] > en_cok {
+            en_cok = sayim[kelime];
+            en_iyi = kelime;
+        }
+    }
+    en_iyi;
+}
+
+harf_dagilimi (metin:str) -> map {
+    dagilim = #[];
+    for c in sadelestir(metin) {
+        dagilim[c] = dagilim.get(c, 0) + 1;
+    }
+    dagilim;
+}
+
+// ---------------------------------------------------------------- biçimlendirme
+
+bas_harfi_buyut (kelime:str) -> str {
+    if kelime.len() == 0 { return kelime; }
+    kelime.slice(0, 1).upper() + kelime.slice(1);
+}
+
+baslik_yap (metin:str) -> str {
+    parcalar = [];
+    for kelime in metin.split(" ") { parcalar.push(bas_harfi_buyut(kelime)); }
+    parcalar.join(" ");
+}
+
+sola_yasla (s:str, genislik:i32) -> str {
+    if s.len() >= genislik { return s; }
+    s + " ".repeat(genislik - s.len());
+}
+
+// ---------------------------------------------------------------- ana program
+
+main () -> i32 {
+    metin = "Bir berber bir berbere bir berber gel beraber bir berber dukkani acalim demis";
+
+    print("--- temel işlemler ---");
+    print("ters      :", ters_cevir("radian"));
+    print("başlık    :", baslik_yap("radian programlama dili"));
+    print("sadeleşmiş:", sadelestir("Ka-ra, Kutu!"));
+
+    print("");
+    print("--- palindrom ---");
+    for aday in ["kayak", "Ey Edip Adana'da pide ye", "radian"] {
+        print(sola_yasla(aday, 26), "→", palindrom_mu(aday));
+    }
+
+    print("");
+    print("--- sezar şifresi ---");
+    gizli = sezar("Radian dili", 3);
+    print("şifreli   :", gizli);
+    print("çözülmüş  :", sezar(gizli, -3));
+
+    print("");
+    print("--- kelime istatistiği ---");
+    sayim = kelime_sayaci(metin);
+    print("farklı kelime :", sayim.len());
+    print("en sık        :", en_sik(sayim), "→", sayim[en_sik(sayim)], "kez");
+
+    kelimeler = sadelestir_kelimeler(metin);
+    print("toplam kelime :", kelimeler.len());
+
+    en_uzun = kelimeler[0];
+    for k in kelimeler {
+        if k.len() > en_uzun.len() { en_uzun = k; }
+    }
+    print("en uzun       :", en_uzun);
+
+    print("");
+    print("--- harf dağılımı (ilk 5 harf) ---");
+    dagilim = harf_dagilimi(metin);
+    for harf in ["a", "b", "e", "i", "r"] {
+        print(harf, ":", "*".repeat(dagilim.get(harf, 0)), dagilim.get(harf, 0));
+    }
+
+    // Doğrulamalar
+    assert(ters_cevir("abc") == "cba", "ters_cevir yanlış");
+    assert(palindrom_mu("kayak"), "palindrom yanlış");
+    assert(!palindrom_mu("radian"), "palindrom yanlış pozitif");
+    assert(sezar(sezar("Test", 5), -5) == "Test", "sezar tersi tutmadı");
+    assert(bas_harfi_buyut("radian") == "Radian", "başlık yanlış");
+    print("");
+    print("tüm doğrulamalar geçti");
+    0;
+}
