@@ -10,6 +10,7 @@ Kullanım:
 
     python3 radian.py --tokens dosya.rad   # yalnızca token akışını yazdır
     python3 radian.py --ast    dosya.rad   # yalnızca AST'yi yazdır
+    python3 radian.py --check  dosya.rad   # statik denetim (çalıştırmadan)
 
 Çıkış kodu: programın değeri 0..255 aralığında bir tamsayıysa o değer,
 hata durumunda 1, aksi halde 0.
@@ -22,6 +23,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+from checker import check_source                                     # noqa: E402
 from interpreter import Interpreter, RadianError, UNIT, to_display   # noqa: E402
 from lexer import lexer                                              # noqa: E402
 from parser import ParseError, Parser, parse_source                  # noqa: E402
@@ -52,6 +54,23 @@ def dump_ast(source: str, base_dir: str | None = None) -> int:
     except ParseError as err:
         print(f"Sözdizimi hatası: {err}", file=sys.stderr)
         return 1
+    return 0
+
+
+def check_only(source: str, base_dir: str | None = None) -> int:
+    """Statik denetim — programı çalıştırmaz."""
+    try:
+        bulgular = check_source(source, symbols_file=SYMBOLS_FILE)
+    except ParseError as err:
+        print(f"Sözdizimi hatası: {err}", file=sys.stderr)
+        return 1
+
+    for bulgu in bulgular:
+        print(f"Tip hatası: {bulgu}", file=sys.stderr)
+    if bulgular:
+        print(f"\n{len(bulgular)} bulgu", file=sys.stderr)
+        return 1
+    print("Denetim temiz")
     return 0
 
 
@@ -152,6 +171,13 @@ def repl() -> int:
 # Giriş noktası
 # ---------------------------------------------------------------------------
 
+MODES = {
+    "run":    run_source,
+    "tokens": dump_tokens,
+    "ast":    dump_ast,
+    "check":  check_only,
+}
+
 def main(argv: list[str]) -> int:
     mode = "run"
     args = list(argv)
@@ -165,13 +191,14 @@ def main(argv: list[str]) -> int:
             mode = "tokens"
         elif flag == "--ast":
             mode = "ast"
+        elif flag == "--check":
+            mode = "check"
         elif flag == "-c":
             if not args:
                 print("-c seçeneği bir kaynak metin bekler", file=sys.stderr)
                 return 1
             source = args.pop(0)
-            return {"run": run_source, "tokens": dump_tokens,
-                    "ast": dump_ast}[mode](source)
+            return MODES[mode](source)
         else:
             print(f"Bilinmeyen seçenek: {flag}\n\n{USAGE}", file=sys.stderr)
             return 1
@@ -192,8 +219,7 @@ def main(argv: list[str]) -> int:
 
     # Göreli import'lar çalıştırılan dosyanın dizinine göre çözülür.
     base_dir = os.path.dirname(os.path.abspath(path))
-    return {"run": run_source, "tokens": dump_tokens,
-            "ast": dump_ast}[mode](source, base_dir)
+    return MODES[mode](source, base_dir)
 
 
 if __name__ == "__main__":

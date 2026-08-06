@@ -1519,6 +1519,11 @@ _BUILTIN_SPECS = [
 ]
 
 
+# Statik denetleyicinin (checker.py) kullanabilmesi için yerleşik adları/ariteleri
+BUILTIN_NAMES    = {name for name, _, _ in _BUILTIN_SPECS}
+BUILTIN_ARITIES  = {name: arity for name, _, arity in _BUILTIN_SPECS}
+
+
 # ---------------------------------------------------------------------------
 # Metotlar — a.b(…) biçiminde çağrılan yerleşikler
 # ---------------------------------------------------------------------------

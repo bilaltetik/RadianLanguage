@@ -705,6 +705,26 @@ assert((-3).abs() == 3);
 assert(type([1]) == "array");
 ```
 
+### Statik denetim (`checker.py`)
+
+`radian.py --check dosya.rad` programı **çalıştırmadan** denetler. Denetleyici
+yalnızca *emin olduğu* durumları bildirir: bir ifadenin tipi çıkarılamıyorsa
+o dal üzerinde hiçbir hata üretilmez. Dolayısıyla temiz çıkan bir program yine
+de çalışma zamanında hata verebilir, ama bildirilen her bulgu gerçek bir hatadır.
+
+Denetlenenler: tanımsız değişken/fonksiyon, çağrı argüman sayısı ve tipleri,
+bildirilmiş dönüş tipi, `if`/`while` koşulu ve `!`/`&&`/`||` işlenenlerinin
+bool olması, bildirilmiş tipe uyumsuz atama, bilinmeyen yapı alanı ve alan
+tipi, operatör işlenen tipleri, indeksleme ve bilinmeyen metot adı.
+
+```
+$ radian.py --check -c 'f (a:i32) -> i32 { a; } f("x", 2);'
+Tip hatası: 'f' 1 argüman bekliyor, 2 verildi [1:26]
+```
+
+Statik katmanda tamsayı genişlikleri ayrıştırılmaz (`i8` ile `i64` aynı sayılır);
+aralık denetimi çalışma zamanının işidir — iki katman birbirini tamamlar.
+
 ### Hata raporlama
 
 Çalışma zamanı hataları `RadianError`'dır ve konum bilgisi taşır. Hata bir

@@ -31,6 +31,7 @@ python3 radian.py -c 'print(2 ** 10);'    # tek satır çalıştır
 python3 radian.py                          # REPL
 python3 radian.py --ast examples/hello.rad # AST'yi yazdır
 python3 radian.py --tokens -c 'x = 1;'     # token akışını yazdır
+python3 radian.py --check examples/matris.rad  # statik denetim (çalıştırmadan)
 
 python3 run_tests.py                       # tüm testler
 ```
@@ -47,6 +48,7 @@ python3 run_tests.py                       # tüm testler
 | Fonksiyonlar | özyineleme, closure, yüksek mertebeden fonksiyonlar, currying |
 | Veri işleme | dizi/harita/string metotları: `map` `filter` `reduce` `sort` `split` `join` `keys` … |
 | Modüller | `import "lib/geometri.rad"` — bir ifadedir, modül değeri döndürür |
+| Statik denetim | `--check`: tanımsız ad, arite, argüman/dönüş tipi, koşul tipi … |
 | Diğer | `//` ve `/* */` yorumları, blok = ifade (son statement'ın değeri) |
 
 Kendi veri tiplerini `struct` ile tanımlarsın; yapı adı hem tip hem kurucudur:
@@ -104,6 +106,7 @@ Prototip/
 ├── lexer.py                 karakter karakter lexer (regex yok)
 ├── parser.py                recursive-descent parser → AST
 ├── interpreter.py           AST üzerinde yürüyen yorumlayıcı
+├── checker.py               statik denetleyici (radian.py --check)
 ├── radian.py                komut satırı aracı + REPL
 ├── symbols.txt              çok karakterli operatörler (çalışma anında yüklenir)
 ├── Radian.ebnf              canonical BNF grameri
@@ -131,5 +134,5 @@ Adım adım tarifler ve çalışılmış örnekler `PARSER_UPDATE_GUIDE.md` içi
 ## Notlar
 
 - Dokümantasyon ve kod içi yorumlar Türkçe; sınıf/metot/token adları İngilizcedir.
-- Bu bir prototiptir: statik tip denetleyicisi, modül sistemi ve kod üretimi
-  henüz yoktur (bkz. `PROGRESS.md` — Faz 6).
+- Bu bir prototiptir: kod üretimi/VM henüz yok, statik denetim isteğe bağlı
+  (`--check`) ve kasıtlı olarak muhafazakâr (bkz. `PROGRESS.md`).

@@ -20,7 +20,8 @@ the repo root — read it before starting work, and update it as you go.
 - `Prototip/lexer.py` — hand-written character-by-character lexer (no regex).
 - `Prototip/parser.py` — recursive-descent parser producing an AST of `Node` objects.
 - `Prototip/interpreter.py` — tree-walking evaluator: scopes, closures, type checks, builtins.
-- `Prototip/radian.py` — CLI: run a file, `-c`, `--ast`, `--tokens`, REPL.
+- `Prototip/checker.py` — optional static checker (`radian.py --check`).
+- `Prototip/radian.py` — CLI: run a file, `-c`, `--ast`, `--tokens`, `--check`, REPL.
 - `Prototip/symbols.txt` — source of truth for multi-character operator symbols, loaded at runtime.
 - `Prototip/Radian.ebnf` — canonical formal BNF grammar (comments only, no prose).
 - `Prototip/Grammer.md` — language reference: precedence table, semantics, runtime behaviour, node-type reference, parser method map.
@@ -40,7 +41,7 @@ Scripts are meant to be run with `Prototip/` as the working directory
 ```bash
 cd Prototip
 
-python3 run_tests.py              # full suite (~327 tests)
+python3 run_tests.py              # full suite (~373 tests)
 python3 run_tests.py -v           # verbose
 python3 run_tests.py test_parser  # one module
 
@@ -60,7 +61,8 @@ New behaviour needs a test in `tests/` — the `__main__` case tables in
 Test modules: `test_lexer`, `test_parser`, `test_interpreter`, `test_examples`
 (runs every `examples/*.rad` end to end plus the CLI via subprocess),
 `test_robustness` (asserts that only ParseError/RadianError can escape, for a
-table of hostile inputs), `test_modules` (import semantics in temp dirs), and
+table of hostile inputs), `test_modules` (import semantics in temp dirs),
+`test_checker` (static checker: diagnostics + no false positives), and
 `test_docs` (executes every ` ```radian ` block in `Grammer.md`, `README.md`,
 and `PARSER_UPDATE_GUIDE.md`). Consequences worth knowing:
 
@@ -150,6 +152,24 @@ _parse_expression → _parse_assign (=, +=, …, right-assoc, returns lvalue)
   to Python's `RecursionError`.
 - `Interpreter(out=...)` redirects `print`/`write`, which is how tests capture output.
 - After the top-level statements, a zero-arg `main` is called automatically.
+
+### Checker (`checker.py`)
+
+A separate pass over the AST, run only via `--check` — it never runs as part
+of `radian.py file.rad`.
+
+- The contract is **no false positives**: `_infer` returns `UNKNOWN` whenever
+  it cannot be certain, and `assignable()` treats `UNKNOWN` as compatible, so
+  a diagnostic always indicates a real error. `tests/test_checker.py` enforces
+  this against every `examples/*.rad` plus a table of correct programs.
+- Integer widths collapse to one `int` type; range checking stays at runtime.
+- Function and struct names are hoisted per block before bodies are checked,
+  matching the interpreter's late name resolution.
+- Module members are deliberately untracked (`import` yields `MODULE`, member
+  access on it is `UNKNOWN`).
+- Builtin names/arities come from `interpreter.BUILTIN_NAMES` /
+  `BUILTIN_ARITIES`; method names from the same method tables the interpreter
+  uses, so the two cannot drift.
 
 ### Extending the grammar
 

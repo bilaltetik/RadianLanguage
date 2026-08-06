@@ -137,6 +137,21 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("[ASSIGN]", proc.stdout)
 
+    def test_check_secenegi_temiz(self):
+        proc = self._cli("--check", os.path.join(EXAMPLES_DIR, "algoritmalar.rad"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("Denetim temiz", proc.stdout)
+
+    def test_check_secenegi_bulgu_bildirir(self):
+        proc = self._cli("--check", "-c", 'f (a:i32) -> i32 { a; } f("x");')
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("Tip hatası", proc.stderr)
+
+    def test_check_programi_calistirmaz(self):
+        proc = self._cli("--check", "-c", 'print("çalıştı");')
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("çalıştı", proc.stdout)
+
     def test_olmayan_dosya(self):
         proc = self._cli("yok_boyle_bir_dosya.rad")
         self.assertEqual(proc.returncode, 1)
