@@ -7,6 +7,11 @@ from enum import Enum, auto
 SYMBOL_CHARS  = set("+-*/%=();:,.[]<>{}&|!~^?@#")
 NUMBER_EXTRAS = set("._Eebxo")
 
+# Yorum işaretleri — lexer seviyesinde tamamen atılır, token üretilmez.
+LINE_COMMENT        = "//"
+BLOCK_COMMENT_OPEN  = "/*"
+BLOCK_COMMENT_CLOSE = "*/"
+
 
 # ---------------------------------------------------------------------------
 # Yardımcı fonksiyonlar
@@ -33,6 +38,13 @@ def load_multi_char_symbols(filepath: str = "symbols.txt") -> list[str]:
     Yorum satırları ('#') ve boş satırlar atlanır.
     Greedy (en uzun eşleşme) için uzunluğa göre azalan sırada döner.
     """
+    if not os.path.exists(filepath) and not os.path.isabs(filepath):
+        # Çalışma dizini farklıysa modülün yanındaki dosyaya düş
+        fallback = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                filepath)
+        if os.path.exists(fallback):
+            filepath = fallback
+
     if not os.path.exists(filepath):
         return []
     with open(filepath, encoding="utf-8") as fh:
@@ -143,6 +155,14 @@ def lexer(
     def error(msg: str) -> dict:
         return {"line": line, "column": column, "error": msg}
 
+    def check_number() -> dict | None:
+        """Yığındaki sayısal sabit eksik kalmış mı? (0x, 1e, 1e+ …)"""
+        if has_prefix and len(stack) <= 2:
+            return error(f"'{stack}' önekinden sonra rakam bekleniyor")
+        if has_exponent and stack[-1] in "eE+-":
+            return error("Üs gösteriminden sonra rakam bekleniyor")
+        return None
+
     # ------------------------------------------------------------------
     # Ana döngü
     # ------------------------------------------------------------------
@@ -158,6 +178,25 @@ def lexer(
             # Boşluk karakterleri
             if is_whitespace(char):
                 advance()
+                continue
+
+            # Satır yorumu: '//' → satır sonuna kadar atla
+            if input_str.startswith(LINE_COMMENT, index):
+                while index < length and input_str[index] != "\n":
+                    advance()
+                continue
+
+            # Blok yorumu: '/* ... */' — iç içe geçmez
+            if input_str.startswith(BLOCK_COMMENT_OPEN, index):
+                open_line, open_col = line, column + 1
+                advance(); advance()                     # '/*' tüket
+                while (index < length
+                       and not input_str.startswith(BLOCK_COMMENT_CLOSE, index)):
+                    advance()
+                if index >= length:
+                    return {"line": open_line, "column": open_col,
+                            "error": "Kapatılmamış blok yorumu; '*/' bekleniyor"}
+                advance(); advance()                     # '*/' tüket
                 continue
 
             # Çok karakterli sembol denemesi (greedy)
@@ -255,6 +294,9 @@ def lexer(
                         return error("Geçersiz sayısal önek")
 
             else:
+                err = check_number()
+                if err is not None:
+                    return err
                 flush()
                 # char tüketilmedi; döngü yeniden bu karakteri işler
 
@@ -308,9 +350,13 @@ def lexer(
     # ------------------------------------------------------------------
     if stack:
         if stack_type in (TokenType.LITERAL_STR, TokenType.LITERAL_CHAR):
-            # Kapanmamış string/char → hata
-            return {"line": line, "column": column,
+            # Kapanmamış string/char → hata; konum sabitin *başladığı* yerdir
+            return {"line": tok_line, "column": tok_col,
                     "error": "Kapatılmamış dize veya karakter sabiti"}
+        if stack_type == TokenType.LITERAL_NUM:
+            err = check_number()
+            if err is not None:
+                return err
         flush()
 
     return tokens
@@ -331,6 +377,8 @@ if __name__ == "__main__":
         '"merhaba\\ndünya"',
         "x ... y",
         'a ** b **= c',
+        'a = 1; // satır yorumu\nb = 2;',
+        'a /* blok yorumu */ + b',
     ]
 
     for src in samples:

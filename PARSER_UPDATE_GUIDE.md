@@ -389,9 +389,8 @@ if op == "?":                              # interpreter.py: _eval_unary
     return value is not UNIT
 ```
 
-`UNARY_OPS` üyeleri yalnızca **önek** konumundadır. Sonek biçimi istiyorsan
-bu bir postfix eklentisidir → §4.4; çalışılmış örneği `++` / `--`'dır
-(`PRE_OP` ve `POST_OP` düğümleri).
+Unary operatörler yalnızca **önek** konumundadır; sonek (`x!`) istiyorsan
+bu bir postfix biçimidir → §4.4.
 
 ### 4.3 Yeni yerleşik fonksiyon / metot
 
@@ -453,10 +452,7 @@ def _parse_term(self) -> Node:
 ```
 
 Sonek metodu **her zaman sol taraftaki düğümü parametre alır** ve onu
-yeni düğümün çocuğu yapar; zincir böylece soldan sağa kurulur. `++` / `--`
-bu kalıbın çalışan örneğidir: `_parse_term` içinde `POST_OP` üretilir,
-`_parse_unary` içinde `PRE_OP`, ve hedefin lvalue olduğu `_require_lvalue`
-ile parse zamanında doğrulanır.
+yeni düğümün çocuğu yapar; zincir böylece soldan sağa kurulur:
 
 ```radian
 // a.b[0](x) zinciri: MEMBER → INDEX → CALL

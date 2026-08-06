@@ -1,0 +1,18 @@
+// Geometri modülü — `import` ile kullanılmak üzere.
+//
+// Bir modülün üst düzey tanımlarının tümü (değişkenler, fonksiyonlar,
+// yapılar) dışarıdan görünür: mat.PI, mat.kare, mat.Vektor …
+
+PI = 3.141592653589793;
+
+struct Vektor (x:f64, y:f64);
+
+kare (x:f64) -> f64 { x * x; }
+
+uzunluk (v:Vektor) -> f64 { (kare(v.x) + kare(v.y)) ** 0.5; }
+
+topla (a:Vektor, b:Vektor) -> Vektor { Vektor(a.x + b.x, a.y + b.y); }
+
+daire_alani (r:f64) -> f64 { PI * kare(r); }
+
+daire_cevresi (r:f64) -> f64 { 2.0 * PI * r; }

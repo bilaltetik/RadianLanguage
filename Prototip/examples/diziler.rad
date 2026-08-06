@@ -1,0 +1,39 @@
+// Dizi ve string metotları, yüksek mertebeden fonksiyonlar.
+
+kare (x:i32) -> i32 { x * x; }
+tek  (x:i32) -> bool { x % 2 == 1; }
+topla (a:i32, b:i32) -> i32 { a + b; }
+
+main () -> i32 {
+    sayilar = range(1, 11);
+    print("sayılar :", sayilar);
+    print("tek     :", sayilar.filter(tek));
+    print("kareler :", sayilar.map(kare));
+    print("toplam  :", sayilar.reduce(topla));
+    print("ters    :", sayilar.reverse());
+    print("dilim   :", sayilar.slice(2, 5));
+
+    // Yerinde değişiklik
+    yigin = [];
+    yigin.push(1);
+    yigin.push(2, 3);
+    print("yığın   :", yigin);
+    son = yigin.pop();
+    print("pop     :", son, "kalan:", yigin);
+
+    // String işleme
+    cumle = "  radian dili hızlıdır  ";
+    kelimeler = cumle.trim().split(" ");
+    print("kelimeler:", kelimeler);
+    print("büyük    :", cumle.trim().upper());
+    print("ters yazı:", kelimeler.reverse().join(" "));
+
+    // Karakter karakter gezinme
+    sesli = 0;
+    for c in "radian" {
+        if "aeıioöuü".contains(c) { sesli += 1; }
+    }
+    print("sesli harf sayısı:", sesli);
+
+    0;
+}
