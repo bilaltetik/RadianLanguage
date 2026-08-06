@@ -1396,6 +1396,26 @@ def _bi_type(interp, args, node):
     return type_name(args[0])
 
 
+def _bi_ord(interp, args, node):
+    """Tek karakterin Unicode kod noktası."""
+    value = args[0]
+    if not isinstance(value, str) or len(value) != 1:
+        raise RadianError(
+            f"ord() tek karakter bekler, {type_name(value)} bulundu", node)
+    return ord(value)
+
+
+def _bi_chr(interp, args, node):
+    """Kod noktasından tek karakterlik dize."""
+    value = args[0]
+    if not _is_int(value):
+        raise RadianError(
+            f"chr() tamsayı bekler, {type_name(value)} bulundu", node)
+    if not (0 <= value <= 0x10FFFF):
+        raise RadianError(f"chr() aralık dışı kod noktası: {value}", node)
+    return chr(value)
+
+
 def _bi_map(interp, args, node):
     """map()  →  boş harita;  map(ikililer)  →  [[k, v], …] listesinden."""
     if not args:
@@ -1487,6 +1507,8 @@ _BUILTIN_SPECS = [
     ("float",  _bi_float,  1),
     ("bool",   _bi_bool,   1),
     ("type",   _bi_type,   1),
+    ("ord",    _bi_ord,    1),
+    ("chr",    _bi_chr,    1),
     ("map",    _bi_map,    (0, 1)),
     ("range",  _bi_range,  (1, 3)),
     ("abs",    _bi_abs,    1),

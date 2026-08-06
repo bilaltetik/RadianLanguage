@@ -322,13 +322,26 @@ class Parser:
 
     # ------------------------------------------------------------------
     # Statement = FuncDef
+    #           | StructDef ";"
     #           | "return" [ Expression ] ";"
     #           | "break" ";"
     #           | "continue" ";"
-    #           | Expression [ ";" ]
+    #           | BlockTailedExpr [ ";" ]
+    #           | Expression ";"
     #
-    # ";" yalnızca gövdesi blokla biten ifadelerde (if/while/for/blok)
-    # opsiyoneldir; diğer tüm ifadelerde zorunludur.
+    # BlockTailedExpr = Block | IfExpr | WhileExpr | ForExpr
+    #
+    # Bir statement blokla biten bir yapıyla *başlıyorsa* orada biter:
+    # operatör zinciri sürdürülmez. Aksi halde
+    #
+    #     while i < 3 { i++; }
+    #     -1;
+    #
+    # ikinci satırı ilkine bağlayıp `(while …) - 1` olarak okunurdu.
+    # Değer olarak kullanmak için parantez ya da bir bağlam gerekir:
+    #
+    #     r = if x { 1; } else { 2; };      (* atamanın parçası → sorun yok *)
+    #     t = ({ 1; }) + 2;                 (* deyim başında değil *)
     # ------------------------------------------------------------------
 
     def _parse_statement(self) -> Node:
@@ -348,14 +361,31 @@ class Parser:
             self.expect(";")
             return self._wrap_statement(node, terminated=True)
 
-        expr = self._parse_expression()
-        if expr.type in BLOCK_TAILED:
+        expr = self._parse_block_tailed()
+        if expr is not None:
             if self.match(";"):                          # ";" serbest ama zorunlu değil
                 self.advance()
             return self._wrap_statement(expr, terminated=True)
 
+        expr = self._parse_expression()
         self.expect(";")
         return self._wrap_statement(expr, terminated=True)
+
+    def _parse_block_tailed(self) -> Node | None:
+        """Statement başındaki blok-kuyruklu yapı; değilse None döndürür.
+
+        Bu yapılar deyim konumunda operatör zincirine girmez (bkz. yukarıdaki
+        `while … { } -1;` örneği).
+        """
+        if self.match("{"):
+            return self._parse_block()
+        if self.match_keyword("if"):
+            return self._parse_if()
+        if self.match_keyword("while"):
+            return self._parse_while()
+        if self.match_keyword("for"):
+            return self._parse_for()
+        return None
 
     def _wrap_statement(self, expr: Node, terminated: bool = False) -> Node:
         if not terminated:

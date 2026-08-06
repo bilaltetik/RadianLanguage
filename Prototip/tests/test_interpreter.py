@@ -288,6 +288,14 @@ class TestControlFlow(unittest.TestCase):
         src = "t = 0; for x in range(1, 6) { if x % 2 == 0 { continue; } t += x; } t;"
         self.assertEqual(run(src), 9)                 # 1 + 3 + 5
 
+    def test_dongu_sonrasi_negatif_sabit_ayri_deyimdir(self):
+        # Regresyon: "while … { } -1;" ifadesi (while …) - 1 oluyordu
+        src = "ara () -> i32 { i = 0; while i < 3 { i++; } -1; } ara();"
+        self.assertEqual(run(src), -1)
+
+    def test_if_sonrasi_negatif_sabit_ayri_deyimdir(self):
+        self.assertEqual(run("f () -> i32 { if false { 1; } -2; } f();"), -2)
+
     def test_for_dongu_degiskeni_disariya_sizmaz(self):
         with self.assertRaises(RadianError):
             run("for x in [1] { x; } x;")
@@ -613,6 +621,22 @@ class TestBuiltins(unittest.TestCase):
         self.assertEqual(run("min([4, 2, 9]);"), 2)
         self.assertEqual(run("max(1, 7);"), 7)
         self.assertEqual(run("abs(-3);"), 3)
+
+    def test_ord_ve_chr(self):
+        self.assertEqual(run("ord('A');"), 65)
+        self.assertEqual(run("chr(65);"), "A")
+        self.assertEqual(run('ord("ş");'), 351)
+        self.assertEqual(run("chr(ord('a') + 1);"), "b")
+
+    def test_ord_tek_karakter_ister(self):
+        with self.assertRaises(RadianError):
+            run('ord("ab");')
+
+    def test_chr_araligi(self):
+        with self.assertRaises(RadianError):
+            run("chr(-1);")
+        with self.assertRaises(RadianError):
+            run("chr(1.5);")
 
     def test_type(self):
         self.assertEqual(run("type(1);"), "int")

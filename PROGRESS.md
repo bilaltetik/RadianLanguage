@@ -77,7 +77,10 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 - [x] Özyineleme derinliği 162 → 1000 (kendi sayacımız + net Radian hatası).
 - [x] Çalışma zamanı hatalarında çağrı yığını (`RadianError.frames`).
 
-### Faz 7 — Sonraki adaylar (henüz başlanmadı)
+### Faz 7 — Örnekler ve sonraki adımlar
+- [x] `ord` / `chr` yerleşikleri.
+- [x] Deyim başındaki blok-kuyruklu yapı hatası düzeltildi (aşağıdaki karar 28).
+- [~] Daha fazla örnek script (`examples/`).
 - [ ] **Statik tip denetleyicisi** — parse sonrası ayrı geçiş; şu an tüm denetim
       çalışma zamanında. En büyük ve en değerli sonraki adım.
 - [ ] Opsiyonel tip `T?` ve `unit` tipinin dilde adlandırılması.
@@ -119,6 +122,7 @@ altyapısı yoktu. Tespit edilen somut sorunlar:
 | 24 | Yapı eşitliği nominaldir: aynı `StructType` + alan alan karşılaştırma. | Yapı adı bir tip kimliğidir; alanları aynı olan iki farklı yapı eşit değildir. |
 | 25 | `import` bir ifadedir ve modül değeri döndürür; ad alanı `modül.ad` üzerinden gelir. | Bildirim biçimi yeni sözdizimi ve isim çakışması getirirdi; ifade biçimi modülü birinci sınıf değer yapar. |
 | 26 | Modül yolu import eden dosyanın dizinine göre çözülür; modüller gerçek yola göre önbelleğe alınır. | Kütüphane dosyaları komşularını çalışma dizininden bağımsız import edebilsin diye. |
+| 28 | Bir statement blokla biten bir yapıyla başlıyorsa orada biter; operatör zinciri sürdürülmez (Rust'taki kural). | `while … { }` satırından sonra gelen `-1;` ifadesi sessizce `(while …) - 1` olarak okunuyordu — `examples/algoritmalar.rad` yazarken yakalandı. |
 | 27 | Çalışma zamanı hataları çağrı yığınını hata yayılırken toplar (`RadianError.frames`). | Yığını raise anında kurmak her hata noktasında ek kod isterdi; `call()` içinde tek yerde yakalanıp zenginleştirilir. |
 
 ---

@@ -46,6 +46,14 @@ Statement       = FuncDef
 
     if x { 1; }        (* ";" gerekmez *)
     r = if x { 1; };   (* ifade atamanın parçası → ";" gerekli *)
+
+  Ayrıca: bir Statement blokla biten bir yapıyla BAŞLIYORSA orada biter,
+  operatör zinciri sürdürülmez. Aksi halde
+
+    while i < 3 { i++; }
+    -1;
+
+  ikinci satır ilkine bağlanıp (while …) - 1 olarak okunurdu.
 *)
 
 

@@ -387,6 +387,17 @@ assert("a,b,c".split(",")[1] == "b");
   döngü içinde geçerlidir ve fonksiyon sınırını aşamaz.
 - Blokla biten bir statement'ta `;` opsiyoneldir:
   `if x { 1; }` geçerli, `r = if x { 1; };` içinse `;` gereklidir.
+- Bir statement blokla biten bir yapıyla **başlıyorsa orada biter**; operatör
+  zinciri sürdürülmez. Yoksa aşağıdaki iki satır `(while …) - 1` olarak
+  okunurdu:
+
+  ```
+  while i < 3 { i++; }
+  -1;
+  ```
+
+  Blok-kuyruklu bir yapıyı ifadenin parçası yapmak için ya bir bağlam
+  (`r = if …`) ya da parantez (`({ 1; }) + 2`) gerekir.
 
 ```radian
 mutlak (x:i32) -> i32 {

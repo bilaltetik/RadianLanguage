@@ -1,0 +1,161 @@
+// Klasik algoritmalar — özyineleme, döngüler, dizi işleme.
+//
+// Çalıştır:  python3 radian.py examples/algoritmalar.rad
+
+// ---------------------------------------------------------------- sayı teorisi
+
+obeb (a:i32, b:i32) -> i32 {
+    while b != 0 {
+        kalan = a % b;
+        a = b;
+        b = kalan;
+    }
+    if a < 0 { -a; } else { a; }
+}
+
+okek (a:i32, b:i32) -> i32 { a / obeb(a, b) * b; }
+
+asal_mi (n:i32) -> bool {
+    if n < 2 { return false; }
+    if n % 2 == 0 { return n == 2; }
+    b = 3;
+    while b * b <= n {
+        if n % b == 0 { return false; }
+        b += 2;
+    }
+    true;
+}
+
+// Eratosthenes kalburu — n'e kadarki asallar
+kalbur (n:i32) -> [i32] {
+    elendi = #[];
+    asallar = [];
+    s = 2;
+    while s <= n {
+        if !elendi.has(s) {
+            asallar.push(s);
+            kat = s * s;
+            while kat <= n {
+                elendi[kat] = true;
+                kat += s;
+            }
+        }
+        s++;
+    }
+    asallar;
+}
+
+// ---------------------------------------------------------------- sıralama
+
+// Kabarcık sıralama — dizinin kopyası üzerinde çalışır
+kabarcik (girdi:[i32]) -> [i32] {
+    xs = girdi.slice(0);                 // kopya: referans değeri korumak için
+    n = xs.len();
+    i = 0;
+    while i < n {
+        degisti = false;
+        j = 0;
+        while j < n - i - 1 {
+            if xs[j] > xs[j + 1] {
+                gecici = xs[j];
+                xs[j] = xs[j + 1];
+                xs[j + 1] = gecici;
+                degisti = true;
+            }
+            j++;
+        }
+        if !degisti { break; }           // erken çıkış: dizi sıralı
+        i++;
+    }
+    xs;
+}
+
+// Hızlı sıralama — özyinelemeli, bölme/birleştirme
+hizli (xs:[i32]) -> [i32] {
+    if xs.len() <= 1 { return xs; }
+
+    eksen = xs[xs.len() / 2];
+    kucuk = [];
+    esit  = [];
+    buyuk = [];
+    for x in xs {
+        if x < eksen { kucuk.push(x); }
+        else if x > eksen { buyuk.push(x); }
+        else { esit.push(x); }
+    }
+    hizli(kucuk) + esit + hizli(buyuk);
+}
+
+// ---------------------------------------------------------------- arama
+
+// İkili arama — sıralı dizide indeks, bulunamazsa -1
+ikili_ara (xs:[i32], hedef:i32) -> i32 {
+    alt = 0;
+    ust = xs.len() - 1;
+    while alt <= ust {
+        orta = (alt + ust) / 2;
+        if xs[orta] == hedef { return orta; }
+        if xs[orta] < hedef { alt = orta + 1; } else { ust = orta - 1; }
+    }
+    -1;
+}
+
+// ---------------------------------------------------------------- özyineleme
+
+// Not defterli (memoized) fibonacci — harita ile
+fib_hafizali (n:i32, not_defteri:map) -> i32 {
+    if n < 2 { return n; }
+    if not_defteri.has(n) { return not_defteri[n]; }
+    deger = fib_hafizali(n - 1, not_defteri) + fib_hafizali(n - 2, not_defteri);
+    not_defteri[n] = deger;
+    deger;
+}
+
+hanoi (n:i32, kaynak:str, hedef:str, yardimci:str, adimlar:[str]) -> i32 {
+    if n == 0 { return 0; }
+    hanoi(n - 1, kaynak, yardimci, hedef, adimlar);
+    adimlar.push(kaynak + "→" + hedef);
+    hanoi(n - 1, yardimci, hedef, kaynak, adimlar);
+    adimlar.len();
+}
+
+// ---------------------------------------------------------------- ana program
+
+main () -> i32 {
+    print("--- sayı teorisi ---");
+    print("obeb(48, 18) :", obeb(48, 18));
+    print("okek(4, 6)   :", okek(4, 6));
+    print("asallar<30   :", kalbur(30));
+    print("asal_mi(97)  :", asal_mi(97));
+
+    print("");
+    print("--- sıralama ---");
+    karisik = [5, 3, 9, 1, 7, 3, 8, 2];
+    print("girdi        :", karisik);
+    print("kabarcık     :", kabarcik(karisik));
+    print("hızlı        :", hizli(karisik));
+    print("girdi bozulmadı:", karisik);
+
+    print("");
+    print("--- arama ---");
+    sirali = hizli(karisik);
+    print("sıralı       :", sirali);
+    print("ikili_ara(7) :", ikili_ara(sirali, 7));
+    print("ikili_ara(4) :", ikili_ara(sirali, 4));
+
+    print("");
+    print("--- özyineleme ---");
+    print("fib(30)      :", fib_hafizali(30, #[]));
+    adimlar = [];
+    print("hanoi(3)     :", hanoi(3, "A", "C", "B", adimlar), "adım");
+    print("adımlar      :", adimlar.join(" "));
+
+    // Doğrulamalar — bir şey bozulursa program burada durur
+    assert(obeb(48, 18) == 6, "obeb yanlış");
+    assert(kabarcik(karisik) == hizli(karisik), "iki sıralama ayrıştı");
+    assert(ikili_ara(sirali, 9) == sirali.len() - 1, "ikili arama yanlış");
+    assert(fib_hafizali(30, #[]) == 832040, "fibonacci yanlış");
+    print("");
+    print("tüm doğrulamalar geçti");
+    0;
+}

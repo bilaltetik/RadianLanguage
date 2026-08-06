@@ -1,0 +1,78 @@
+// Dizi yardımcıları — `import "lib/liste.rad"` ile kullanılır.
+//
+// Radian'da diziler referans değerdir; buradaki fonksiyonlar girdilerini
+// değiştirmez, yeni dizi döndürür (adı "_yerinde" ile bitenler hariç).
+
+// [a, b, c] → [[0, a], [1, b], [2, c]]
+sirala_indeksle (xs:[i32]) -> [[i32]] {
+    sonuc = [];
+    i = 0;
+    for x in xs {
+        sonuc.push([i, x]);
+        i++;
+    }
+    sonuc;
+}
+
+// İki diziyi ikişerli eşler; kısa olanın uzunluğunda durur.
+esle (a:[i32], b:[i32]) -> [[i32]] {
+    n = if a.len() < b.len() { a.len(); } else { b.len(); };
+    sonuc = [];
+    i = 0;
+    while i < n {
+        sonuc.push([a[i], b[i]]);
+        i++;
+    }
+    sonuc;
+}
+
+// Diziyi n'lik parçalara böler.
+parcala (xs:[i32], n:i32) -> [[i32]] {
+    parcalar = [];
+    i = 0;
+    while i < xs.len() {
+        son = i + n;
+        if son > xs.len() { son = xs.len(); }
+        parcalar.push(xs.slice(i, son));
+        i += n;
+    }
+    parcalar;
+}
+
+// Yinelenenleri atar, ilk görülme sırasını korur.
+tekille (xs:[i32]) -> [i32] {
+    gorulen = #[];
+    sonuc = [];
+    for x in xs {
+        if !gorulen.has(x) {
+            gorulen[x] = true;
+            sonuc.push(x);
+        }
+    }
+    sonuc;
+}
+
+// Dizideki en büyük değerin indeksi (boş dizi → -1).
+en_buyuk_indeks (xs:[f64]) -> i32 {
+    if xs.len() == 0 { return -1; }
+    en_iyi = 0;
+    i = 1;
+    while i < xs.len() {
+        if xs[i] > xs[en_iyi] { en_iyi = i; }
+        i++;
+    }
+    en_iyi;
+}
+
+// Sayıları sayan basit histogram: değer → adet
+say (xs:[i32]) -> map {
+    sayim = #[];
+    for x in xs { sayim[x] = sayim.get(x, 0) + 1; }
+    sayim;
+}
+
+// Dizinin ortalaması (boş dizi → 0.0).
+ortalama (xs:[f64]) -> f64 {
+    if xs.len() == 0 { return 0.0; }
+    sum(xs) * 1.0 / xs.len();
+}

@@ -448,6 +448,32 @@ class TestControlFlow(unittest.TestCase):
         program = parse("if x { 1; }")
         self.assertEqual(program.children[0].children[0].type, NodeType.IF)
 
+    def test_deyim_basindaki_blok_kuyruklu_yapi_operatore_baglanmaz(self):
+        # "while … { } -1;" ifadesi (while …) - 1 olarak okunmamalı
+        program = parse("while i < 3 { i++; } -1;")
+        self.assertEqual(len(program.children), 2)
+        self.assertEqual(program.children[0].children[0].type, NodeType.WHILE)
+        self.assertEqual(sexp(program.children[1].children[0]),
+                         "(UNARY_OP OPERATOR:- LITERAL:1)")
+
+    def test_deyim_basindaki_if_de_ayni_kurala_uyar(self):
+        program = parse("if a { 1; } -2;")
+        self.assertEqual(len(program.children), 2)
+        self.assertEqual(program.children[0].children[0].type, NodeType.IF)
+
+    def test_deyim_basindaki_blok_da_ayni_kurala_uyar(self):
+        program = parse("{ 1; } [2];")
+        self.assertEqual(len(program.children), 2)
+        self.assertEqual(program.children[0].children[0].type, NodeType.BLOCK)
+        self.assertEqual(program.children[1].children[0].type, NodeType.ARRAY)
+
+    def test_deger_konumunda_zincir_calismaya_devam_eder(self):
+        # Deyim başında değil → operatör zinciri normal işler
+        self.assertEqual(
+            sexp(parse_expr("r = if a { 1; } else { 2; };")),
+            "(ASSIGN:= IDENTIFIER:r (IF:if IDENTIFIER:a "
+            "(BLOCK (STATEMENT LITERAL:1)) (BLOCK (STATEMENT LITERAL:2))))")
+
     def test_while(self):
         node = parse_expr("while i < 10 { i += 1; }")
         self.assertEqual(node.type, NodeType.WHILE)
